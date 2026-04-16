@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Health Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <span class="logo-mark"></span>
+    <h1>vital<span class="accent">.</span></h1>
+    <span class="header-date" id="headerDate"></span>
+  </div>
+  <div class="header-right">
+    <div class="sync-status" id="syncStatus">
+      <span class="sync-dot"></span>
+      <span id="syncLabel">connecting…</span>
+    </div>
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+      <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+    <button class="btn-config" id="configBtn">Configure</button>
+  </div>
+</header>
+
+<!-- Config Modal -->
+<div class="modal-overlay" id="configModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>API Configuration</h2>
+      <button class="modal-close" id="modalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-note">Weight and step targets are stored server-side (Netlify Blobs) and sync across all your devices. WHOOP token lives only in Netlify env vars.</p>
+      <div class="form-group">
+        <label>Starting Weight (kg)</label>
+        <input type="number" id="startWeight" placeholder="e.g. 92" step="0.1"/>
+      </div>
+      <div class="form-group">
+        <label>Current Weight (kg)</label>
+        <input type="number" id="currentWeight" placeholder="e.g. 87.5" step="0.1"/>
+      </div>
+      <div class="form-group">
+        <label>Target Weight (kg)</label>
+        <input type="number" id="targetWeight" placeholder="e.g. 78" step="0.1"/>
+      </div>
+      <div class="form-group">
+        <label>Daily Step Target</label>
+        <input type="number" id="stepTarget" placeholder="e.g. 10000"/>
+      </div>
+      <div class="form-group">
+        <label>Wake Time</label>
+        <input type="time" id="wakeTime" value="06:30"/>
+      </div>
+      <div class="form-group">
+        <label>Target Sleep Time</label>
+        <input type="time" id="sleepTime" value="22:30"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div class="config-save-status" id="configSaveStatus"></div>
+      <button class="btn-save" id="saveConfig">Save & Refresh</button>
+    </div>
+  </div>
+</div>
+
+<main class="dashboard">
+
+  <!-- Tile 1: Weight Tracker -->
+  <div class="tile tile-weight" id="tileWeight">
+    <div class="tile-header">
+      <span class="tile-label">Weight Journey</span>
+      <span class="tile-badge" id="weightBadge">—</span>
+    </div>
+    <div class="tile-chart-wrap">
+      <canvas id="weightChart" aria-label="Weight progress chart from start to target weight"></canvas>
+    </div>
+    <div class="weight-stats">
+      <div class="wstat">
+        <span class="wstat-label">Start</span>
+        <span class="wstat-val" id="wStart">—</span>
+      </div>
+      <div class="wstat wstat-current">
+        <span class="wstat-label">Now</span>
+        <span class="wstat-val" id="wNow">—</span>
+      </div>
+      <div class="wstat">
+        <span class="wstat-label">Target</span>
+        <span class="wstat-val" id="wTarget">—</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tile 2: Sleep Score -->
+  <div class="tile tile-sleep" id="tileSleep">
+    <div class="tile-header">
+      <span class="tile-label">Sleep</span>
+      <span class="tile-badge whoop-badge">WHOOP</span>
+    </div>
+    <div class="score-ring-wrap">
+      <svg class="score-ring" viewBox="0 0 120 120">
+        <circle class="ring-bg" cx="60" cy="60" r="50" />
+        <circle class="ring-fill ring-sleep" id="sleepRingFill" cx="60" cy="60" r="50"
+          stroke-dasharray="314" stroke-dashoffset="314" />
+        <text class="ring-score" id="sleepScoreText" x="60" y="58" text-anchor="middle">—</text>
+        <text class="ring-sub" x="60" y="74" text-anchor="middle">/ 100</text>
+      </svg>
+    </div>
+    <div class="score-meta">
+      <div class="score-row"><span class="smeta-key">Duration</span><span class="smeta-val" id="sleepDuration">—</span></div>
+      <div class="score-row"><span class="smeta-key">Efficiency</span><span class="smeta-val" id="sleepEfficiency">—</span></div>
+      <div class="score-row"><span class="smeta-key">REM</span><span class="smeta-val" id="sleepRem">—</span></div>
+    </div>
+    <p class="commentary" id="sleepCommentary">Configure WHOOP token to load sleep data.</p>
+  </div>
+
+  <!-- Tile 3: Recovery Score -->
+  <div class="tile tile-recovery" id="tileRecovery">
+    <div class="tile-header">
+      <span class="tile-label">Recovery</span>
+      <span class="tile-badge whoop-badge">WHOOP</span>
+    </div>
+    <div class="score-ring-wrap">
+      <svg class="score-ring" viewBox="0 0 120 120">
+        <circle class="ring-bg" cx="60" cy="60" r="50" />
+        <circle class="ring-fill ring-recovery" id="recoveryRingFill" cx="60" cy="60" r="50"
+          stroke-dasharray="314" stroke-dashoffset="314" />
+        <text class="ring-score" id="recoveryScoreText" x="60" y="58" text-anchor="middle">—</text>
+        <text class="ring-sub" x="60" y="74" text-anchor="middle">/ 100</text>
+      </svg>
+    </div>
+    <div class="score-meta">
+      <div class="score-row"><span class="smeta-key">HRV</span><span class="smeta-val" id="recoveryHrv">—</span></div>
+      <div class="score-row"><span class="smeta-key">Resting HR</span><span class="smeta-val" id="recoveryRhr">—</span></div>
+      <div class="score-row"><span class="smeta-key">SpO2</span><span class="smeta-val" id="recoverySpo2">—</span></div>
+    </div>
+    <p class="commentary" id="recoveryCommentary">Configure WHOOP token to load recovery data.</p>
+  </div>
+
+  <!-- Tile 4: Step Tracker -->
+  <div class="tile tile-steps" id="tileSteps">
+    <div class="tile-header">
+      <span class="tile-label">Steps</span>
+      <span class="tile-badge" id="stepsBadge">Today</span>
+    </div>
+    <div class="step-ring-wrap">
+      <svg class="step-ring" viewBox="0 0 200 200">
+        <circle class="step-ring-bg" cx="100" cy="100" r="80"/>
+        <circle class="step-ring-fill" id="stepRingFill" cx="100" cy="100" r="80"
+          stroke-dasharray="502" stroke-dashoffset="502"/>
+        <text class="step-count" id="stepCount" x="100" y="95" text-anchor="middle">—</text>
+        <text class="step-label-inner" x="100" y="118" text-anchor="middle">steps</text>
+      </svg>
+    </div>
+    <div class="step-stats">
+      <div class="step-stat">
+        <span class="step-stat-label">Target</span>
+        <span class="step-stat-val" id="stepTargetDisplay">—</span>
+      </div>
+      <div class="step-stat">
+        <span class="step-stat-label">Remaining</span>
+        <span class="step-stat-val" id="stepRemaining">—</span>
+      </div>
+      <div class="step-stat">
+        <span class="step-stat-label">% Done</span>
+        <span class="step-stat-val" id="stepPct">—</span>
+      </div>
+    </div>
+    <div class="step-note">Steps loaded from device/health API. <button class="link-btn" id="manualStepsBtn">Log manually</button></div>
+    <div class="manual-steps-wrap" id="manualStepsWrap" style="display:none">
+      <input type="number" id="manualStepsInput" placeholder="Enter step count" />
+      <button class="btn-small" id="manualStepsSave">Set</button>
+    </div>
+  </div>
+
+  <!-- Tile 5: Caffeine Window -->
+  <div class="tile tile-caffeine tile-wide" id="tileCaffeine">
+    <div class="tile-header">
+      <span class="tile-label">Caffeine Window</span>
+      <span class="tile-badge" id="caffeineBadge">—mg active</span>
+    </div>
+    <div class="caffeine-controls">
+      <button class="btn-log" id="logCoffee">+ Espresso (80mg)</button>
+      <button class="btn-log" id="logCoffeeFilter">+ Filter (120mg)</button>
+      <button class="btn-log" id="logTea">+ Tea (40mg)</button>
+      <select class="caffeine-profile-sel" id="caffeineProfile" title="Metabolism profile affects caffeine half-life (NBK223808)">
+        <option value="default">Average t½ 5h</option>
+        <option value="smoker">Smoker (faster)</option>
+        <option value="contraceptive">OC user (2× slower)</option>
+        <option value="pregnant">Pregnant (3× slower)</option>
+      </select>
+      <button class="btn-clear" id="clearCaffeine">Clear all</button>
+    </div>
+    <div class="caffeine-chart-wrap">
+      <canvas id="caffeineChart" aria-label="Caffeine decay curve showing active caffeine levels over time with sleep and wake markers"></canvas>
+    </div>
+    <div class="caffeine-log" id="caffeineLog"></div>
+  </div>
+
+  <!-- Tile 6: Skin Temperature -->
+  <div class="tile tile-temp" id="tileTemp">
+    <div class="tile-header">
+      <span class="tile-label">Skin Temp</span>
+      <span class="tile-badge whoop-badge">WHOOP</span>
+    </div>
+    <div class="temp-current">
+      <span class="temp-delta" id="tempDelta">—</span>
+      <span class="temp-unit">°C vs baseline</span>
+    </div>
+    <div class="tile-chart-wrap tile-chart-wrap-sm">
+      <canvas id="tempChart" aria-label="Skin temperature trend over 7 days"></canvas>
+    </div>
+    <p class="commentary" id="tempCommentary">Configure WHOOP token to load temperature data.</p>
+  </div>
+
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="js/config.js"></script>
+<script src="js/whoop.js"></script>
+<script src="js/caffeine.js"></script>
+<script src="js/steps.js"></script>
+<script src="js/weight.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
