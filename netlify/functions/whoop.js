@@ -1,59 +1,59 @@
 // netlify/functions/whoop.js
-// Serverless proxy — WHOOP_TOKEN lives only in Netlify env, never sent to browser.
+// WHOOP API proxy. Gets a valid (auto-refreshed) token from Blobs —
+// no manual WHOOP_TOKEN env var needed after initial OAuth setup.
+
+const { getValidToken } = require('./lib/get-valid-token');
 
 const WHOOP_BASE = 'https://api.prod.whoop.com/developer/v1';
 
-exports.handler = async (event) => {
-  const CORS = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  };
+const ALLOWED = [
+  '/activity/sleep',
+  '/recovery',
+  '/cycle',
+  '/workout',
+  '/user/profile/basic',
+];
 
-  // Preflight
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+};
+
+exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers: CORS, body: '' };
   }
 
-  const token = process.env.WHOOP_TOKEN;
-  if (!token) {
-    return {
-      statusCode: 500,
-      headers: { ...CORS, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'WHOOP_TOKEN environment variable is not set.' }),
-    };
-  }
-
-  // path param: e.g. /activity/sleep?limit=1
   const path = event.queryStringParameters?.path;
   if (!path) {
-    return {
-      statusCode: 400,
-      headers: { ...CORS, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Missing required query param: path' }),
-    };
+    return json(400, { error: 'Missing query param: path' });
   }
 
-  // Only allow known WHOOP endpoints to prevent open-proxy abuse
-  const ALLOWED = ['/activity/sleep', '/recovery', '/cycle', '/workout', '/user/profile/basic'];
-  const allowed = ALLOWED.some(prefix => path.startsWith(prefix));
-  if (!allowed) {
-    return {
-      statusCode: 403,
-      headers: { ...CORS, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: `Path not permitted: ${path}` }),
-    };
+  if (!ALLOWED.some(prefix => path.startsWith(prefix))) {
+    return json(403, { error: 'Path not permitted: ' + path });
+  }
+
+  let token;
+  try {
+    token = await getValidToken();
+  } catch (err) {
+    if (err.message === 'NOT_AUTHENTICATED') {
+      return json(401, { error: 'NOT_AUTHENTICATED' });
+    }
+    if (err.message === 'REFRESH_FAILED') {
+      return json(401, { error: 'REFRESH_FAILED' });
+    }
+    return json(500, { error: err.message });
   }
 
   try {
-    const url = `${WHOOP_BASE}${path}`;
-    const res = await fetch(url, {
+    const res = await fetch(`${WHOOP_BASE}${path}`, {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: 'Bearer ' + token,
         'Content-Type': 'application/json',
       },
     });
-
     const body = await res.text();
     return {
       statusCode: res.status,
@@ -61,10 +61,14 @@ exports.handler = async (event) => {
       body,
     };
   } catch (err) {
-    return {
-      statusCode: 502,
-      headers: { ...CORS, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: `Upstream error: ${err.message}` }),
-    };
+    return json(502, { error: 'Upstream error: ' + err.message });
   }
 };
+
+function json(status, data) {
+  return {
+    statusCode: status,
+    headers: { ...CORS, 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  };
+}

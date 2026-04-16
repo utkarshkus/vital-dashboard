@@ -3,7 +3,10 @@
   functions = "netlify/functions"
 
 # Netlify Blobs is available by default on all Netlify sites with Functions.
-# No additional configuration required — getStore() is injected at runtime.
+# Required env vars (set in Netlify UI → Site configuration → Environment variables):
+#   WHOOP_CLIENT_ID      — from developer.whoop.com
+#   WHOOP_CLIENT_SECRET  — from developer.whoop.com
+#   WHOOP_REDIRECT_URI   — https://YOUR-SITE.netlify.app/.netlify/functions/auth-callback
 
 [[redirects]]
   from = "/*"

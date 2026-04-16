@@ -107,6 +107,7 @@ async function loadSleep() {
     document.getElementById('sleepRingFill').style.stroke = scoreColor;
   } catch (e) {
     console.warn('Sleep load error:', e.message);
+    if (e.message === 'NOT_AUTHENTICATED') { handleWhoopAuthError(); return; }
     document.getElementById('sleepCommentary').textContent = 'WHOOP data unavailable: ' + e.message;
   }
 }
@@ -133,6 +134,7 @@ async function loadRecovery() {
     }
   } catch (e) {
     console.warn('Recovery load error:', e.message);
+    if (e.message === 'NOT_AUTHENTICATED') { handleWhoopAuthError(); return; }
     document.getElementById('recoveryCommentary').textContent = 'WHOOP data unavailable: ' + e.message;
   }
 }
@@ -200,6 +202,10 @@ async function boot() {
   StepTracker.render();
   CaffeineTracker.render();
 
+  // Check WHOOP auth before attempting API calls
+  const isConnected = await checkAuthStatus();
+  if (!isConnected) return;
+
   // Fetch WHOOP data
   setSyncStatus('', 'fetching WHOOP…');
   try {
@@ -216,8 +222,67 @@ initDate();
 initConfig();
 
 document.addEventListener('DOMContentLoaded', function() {
+  handleAuthRedirect();
   StepTracker.init();
   CaffeineTracker.init();
   boot();
   setInterval(boot, 15 * 60 * 1000);
 });
+
+// ─── WHOOP auth status ─────────────────────────────────────────
+async function checkAuthStatus() {
+  try {
+    const res = await fetch('/.netlify/functions/auth-status');
+    const data = await res.json();
+
+    const banner = document.getElementById('authBanner');
+    const bannerText = document.getElementById('authBannerText');
+
+    if (!data.connected) {
+      banner.style.display = 'flex';
+      bannerText.textContent = 'WHOOP not connected.';
+      setSyncStatus('error', 'not connected');
+      return false;
+    }
+
+    banner.style.display = 'none';
+    return true;
+  } catch (e) {
+    console.warn('Auth status check failed:', e.message);
+    return true; // assume connected if status check itself fails
+  }
+}
+
+// ─── Handle ?auth= redirect from OAuth callback ───────────────
+function handleAuthRedirect() {
+  const params = new URLSearchParams(window.location.search);
+  const auth   = params.get('auth');
+  if (!auth) return;
+
+  const banner     = document.getElementById('authBanner');
+  const bannerText = document.getElementById('authBannerText');
+
+  if (auth === 'success') {
+    banner.style.display = 'flex';
+    bannerText.textContent = 'WHOOP connected successfully.';
+    banner.classList.add('auth-banner-success');
+    setTimeout(function() { banner.style.display = 'none'; }, 4000);
+  } else if (auth === 'error') {
+    const reason = params.get('reason') || 'unknown error';
+    banner.style.display = 'flex';
+    bannerText.textContent = 'WHOOP connection failed: ' + reason + '.';
+  }
+
+  // Clean ?auth= from URL without page reload
+  const clean = window.location.pathname;
+  window.history.replaceState({}, '', clean);
+}
+
+// ─── Handle NOT_AUTHENTICATED from any WHOOP tile ─────────────
+function handleWhoopAuthError() {
+  const banner     = document.getElementById('authBanner');
+  const bannerText = document.getElementById('authBannerText');
+  banner.style.display = 'flex';
+  bannerText.textContent = 'WHOOP session expired.';
+  setSyncStatus('error', 'session expired');
+}

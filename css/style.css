@@ -670,3 +670,41 @@ body {
 }
 .status-ok   { color: var(--accent); }
 .status-warn { color: var(--warn); }
+
+/* ─── WHOOP Auth Banner ───────────────────────────────────────── */
+.auth-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 10px 2rem;
+  background: rgba(240,192,112,0.08);
+  border-bottom: 1px solid rgba(240,192,112,0.2);
+  font-size: 0.78rem;
+  color: var(--warn);
+}
+
+.auth-banner-success {
+  background: rgba(160,240,176,0.08);
+  border-bottom-color: rgba(160,240,176,0.2);
+  color: var(--accent);
+}
+
+.auth-banner-text { flex: 0 0 auto; }
+
+.btn-connect {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  background: var(--warn);
+  color: #1a1200;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+.btn-connect:hover { opacity: 0.85; }
+
+[data-theme="light"] .btn-connect { color: #fff; background: var(--warn); }

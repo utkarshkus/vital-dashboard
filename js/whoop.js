@@ -1,11 +1,18 @@
 // whoop.js — calls /.netlify/functions/whoop (serverless proxy)
-// The WHOOP_TOKEN env var lives in Netlify only. This file never touches it.
+// Auth is handled server-side via OAuth. This file calls the proxy — no token in browser.
 
 const PROXY = '/.netlify/functions/whoop';
 
 const Whoop = {
   async _get(endpoint) {
     const res = await fetch(`${PROXY}?path=${encodeURIComponent(endpoint)}`);
+    if (res.status === 401) {
+      const err = await res.json().catch(() => ({}));
+      // Signal auth errors distinctly so the UI can show reconnect prompt
+      throw new Error(err.error === 'NOT_AUTHENTICATED' || err.error === 'REFRESH_FAILED'
+        ? 'NOT_AUTHENTICATED'
+        : 'HTTP 401');
+    }
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: res.statusText }));
       throw new Error(err.error || `HTTP ${res.status}`);

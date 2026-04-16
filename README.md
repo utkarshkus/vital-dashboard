@@ -26,12 +26,12 @@ git clone https://github.com/YOUR_USERNAME/health-dashboard.git
 cd health-dashboard
 ```
 
-### 2. Get a WHOOP access token
+### 2. Create a WHOOP developer app
 
-1. Go to [developer.whoop.com](https://developer.whoop.com)
-2. Create a developer application
-3. Authorise it with your WHOOP account
-4. Copy the Bearer token (without the word "Bearer")
+1. Go to [developer.whoop.com](https://developer.whoop.com) and sign in
+2. Click **Create App**
+3. Set the redirect URI to: `https://YOUR-SITE.netlify.app/.netlify/functions/auth-callback`
+4. Note your **Client ID** and **Client Secret**
 
 ### 3. Deploy to Netlify
 
@@ -44,10 +44,11 @@ cd health-dashboard
    - Build command: *(leave empty)*
    - Publish directory: `.`
 5. Click **Deploy site**
-6. Go to **Site settings → Environment variables → Add a variable**:
-   - Key: `WHOOP_TOKEN`
-   - Value: your WHOOP Bearer token
-7. **Trigger a redeploy** (required for env vars to take effect)
+6. Go to **Site settings → Environment variables** and add:
+   - `WHOOP_CLIENT_ID` — from developer.whoop.com
+   - `WHOOP_CLIENT_SECRET` — from developer.whoop.com
+   - `WHOOP_REDIRECT_URI` — `https://YOUR-SITE.netlify.app/.netlify/functions/auth-callback`
+7. **Trigger a redeploy**, then visit your site and click **Connect WHOOP** — done, tokens auto-refresh forever
 
 **Option B — Netlify CLI**
 
@@ -55,7 +56,9 @@ cd health-dashboard
 npm install -g netlify-cli
 netlify login
 netlify init
-netlify env:set WHOOP_TOKEN your_token_here
+netlify env:set WHOOP_CLIENT_ID your_client_id
+netlify env:set WHOOP_CLIENT_SECRET your_client_secret
+netlify env:set WHOOP_REDIRECT_URI https://YOUR-SITE.netlify.app/.netlify/functions/auth-callback
 netlify deploy --prod
 ```
 
