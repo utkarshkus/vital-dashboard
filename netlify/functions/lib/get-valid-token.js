@@ -1,8 +1,9 @@
 // netlify/functions/lib/get-valid-token.js
 // Shared helper — returns a valid WHOOP access token, refreshing if expired.
 
-async function getValidToken() {
-  const { getStore } = require('@netlify/blobs');
+async function getValidToken(event) {
+  const { getStore, connectLambda } = require('@netlify/blobs');
+  connectLambda(event);
   const store = getStore({ name: 'vital-auth', consistency: 'strong' });
   const raw   = await store.get('tokens').catch(() => null);
 

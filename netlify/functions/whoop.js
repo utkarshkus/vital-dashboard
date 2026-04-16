@@ -24,7 +24,7 @@ exports.handler = async (event) => {
 
   let token;
   try {
-    token = await getValidToken();
+    token = await getValidToken(event);
   } catch (err) {
     if (err.message === 'NOT_AUTHENTICATED' || err.message === 'REFRESH_FAILED') {
       return json(401, { error: err.message });

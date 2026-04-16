@@ -13,7 +13,8 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { getStore } = require('@netlify/blobs');
+    const { getStore, connectLambda } = require('@netlify/blobs');
+    connectLambda(event);
     const store = getStore({ name: 'vital-auth', consistency: 'strong' });
     const raw   = await store.get('tokens').catch(() => null);
 

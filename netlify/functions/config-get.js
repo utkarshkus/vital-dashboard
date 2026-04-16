@@ -4,7 +4,8 @@ const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: CORS, body: '' };
   try {
-    const { getStore } = require('@netlify/blobs');
+    const { getStore, connectLambda } = require('@netlify/blobs');
+    connectLambda(event);
     const store = getStore({ name: 'vital-config', consistency: 'strong' });
     const raw   = await store.get('user-config').catch(() => null);
     return { statusCode: 200, headers: { ...CORS, 'Content-Type': 'application/json' }, body: raw || '{}' };

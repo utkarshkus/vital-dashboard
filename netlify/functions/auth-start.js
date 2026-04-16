@@ -19,7 +19,8 @@ exports.handler = async (event, context) => {
   const state = crypto.randomBytes(16).toString('hex');
 
   try {
-    const { getStore } = require('@netlify/blobs');
+    const { getStore, connectLambda } = require('@netlify/blobs');
+    connectLambda(event);
     const store = getStore({ name: 'vital-auth', consistency: 'strong' });
     await store.set('oauth-state', state, { ttl: 600 });
   } catch (err) {
