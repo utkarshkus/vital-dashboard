@@ -36,7 +36,7 @@ exports.handler = async (event) => {
   try {
     const { getStore, connectLambda } = require('@netlify/blobs');
     connectLambda(event);
-    const store   = getStore({ name: 'vital-config', consistency: 'strong' });
+    const store   = getStore('vital-config');
     const raw     = await store.get('user-config').catch(() => null);
     const current = raw ? JSON.parse(raw) : {};
     const merged  = { ...current, ...sanitised };

@@ -21,7 +21,7 @@ exports.handler = async (event, context) => {
   try {
     const { getStore, connectLambda } = require('@netlify/blobs');
     connectLambda(event);
-    const store = getStore({ name: 'vital-auth', consistency: 'strong' });
+    const store = getStore('vital-auth');
     await store.set('oauth-state', state, { ttl: 600 });
   } catch (err) {
     console.error('Blobs set failed:', err.message);

@@ -15,7 +15,7 @@ exports.handler = async (event) => {
   try {
     const { getStore, connectLambda } = require('@netlify/blobs');
     connectLambda(event);
-    const store = getStore({ name: 'vital-auth', consistency: 'strong' });
+    const store = getStore('vital-auth');
     const raw   = await store.get('tokens').catch(() => null);
 
     if (!raw) return json({ connected: false });

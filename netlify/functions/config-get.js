@@ -6,7 +6,7 @@ exports.handler = async (event) => {
   try {
     const { getStore, connectLambda } = require('@netlify/blobs');
     connectLambda(event);
-    const store = getStore({ name: 'vital-config', consistency: 'strong' });
+    const store = getStore('vital-config');
     const raw   = await store.get('user-config').catch(() => null);
     return { statusCode: 200, headers: { ...CORS, 'Content-Type': 'application/json' }, body: raw || '{}' };
   } catch (err) {
