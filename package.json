@@ -1,0 +1,9 @@
+{
+  "name": "vital-dashboard",
+  "version": "1.0.0",
+  "description": "Personal health & weight loss dashboard with WHOOP integration",
+  "private": true,
+  "dependencies": {
+    "@netlify/blobs": "^10.7.4"
+  }
+}
