@@ -32,7 +32,7 @@ exports.handler = async (event, context) => {
     };
   }
 
-  const scopes = 'read:recovery read:sleep read:profile read:body_measurement';
+  const scopes = 'read:recovery read:sleep read:profile read:body_measurement offline';
   const authUrl = new URL('https://api.prod.whoop.com/oauth/oauth2/auth');
   authUrl.searchParams.set('response_type', 'code');
   authUrl.searchParams.set('client_id', clientId);

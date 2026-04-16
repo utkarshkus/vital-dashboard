@@ -64,9 +64,9 @@ const Whoop = {
   async getSkinTempTrend(days = 14) {
     const end = new Date();
     const start = new Date(end - days * 86400000);
-    const fmt = d => d.toISOString().split('T')[0];
+    const fmt = d => d.toISOString();
     const data = await this._get(
-      `/recovery?limit=${days}&start=${fmt(start)}T00:00:00.000Z&end=${fmt(end)}T23:59:59.999Z`
+      `/recovery?limit=${days}&start=${encodeURIComponent(fmt(start))}&end=${encodeURIComponent(fmt(end))}`
     );
     const records = (data.records || []).reverse();
     return records.map(r => ({

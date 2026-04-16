@@ -3,9 +3,9 @@
 
 const { getValidToken } = require('./lib/get-valid-token');
 
-const WHOOP_BASE = 'https://api.prod.whoop.com/developer/v1';
+const WHOOP_BASE = 'https://api.prod.whoop.com/developer/v2';
 
-const ALLOWED = ['/activity/sleep', '/recovery', '/cycle', '/workout', '/user/profile/basic'];
+const ALLOWED = ['/activity/sleep', '/recovery', '/cycle', '/workout', '/user/profile/basic', '/user/measurement/body'];
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
