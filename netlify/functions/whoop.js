@@ -1,8 +1,5 @@
-// netlify/functions/whoop.js
-// WHOOP API proxy. Gets a valid (auto-refreshed) token from Blobs —
-// no manual WHOOP_TOKEN env var needed after initial OAuth setup.
-
-const { getValidToken } = require('./lib/get-valid-token');
+// netlify/functions/whoop.js  (Netlify Functions v2)
+import { getValidToken } from './lib/get-valid-token.js';
 
 const WHOOP_BASE = 'https://api.prod.whoop.com/developer/v1';
 
@@ -16,33 +13,26 @@ const ALLOWED = [
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Content-Type': 'application/json',
 };
 
-exports.handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: CORS, body: '' };
+export default async (req, context) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: CORS });
   }
 
-  const path = event.queryStringParameters?.path;
-  if (!path) {
-    return json(400, { error: 'Missing query param: path' });
-  }
+  const url  = new URL(req.url);
+  const path = url.searchParams.get('path');
 
-  if (!ALLOWED.some(prefix => path.startsWith(prefix))) {
-    return json(403, { error: 'Path not permitted: ' + path });
-  }
+  if (!path) return json(400, { error: 'Missing query param: path' });
+  if (!ALLOWED.some(p => path.startsWith(p))) return json(403, { error: 'Path not permitted: ' + path });
 
   let token;
   try {
     token = await getValidToken();
   } catch (err) {
-    if (err.message === 'NOT_AUTHENTICATED') {
-      return json(401, { error: 'NOT_AUTHENTICATED' });
-    }
-    if (err.message === 'REFRESH_FAILED') {
-      return json(401, { error: 'REFRESH_FAILED' });
+    if (err.message === 'NOT_AUTHENTICATED' || err.message === 'REFRESH_FAILED') {
+      return json(401, { error: err.message });
     }
     return json(500, { error: err.message });
   }
@@ -55,20 +45,14 @@ exports.handler = async (event) => {
       },
     });
     const body = await res.text();
-    return {
-      statusCode: res.status,
-      headers: { ...CORS, 'Content-Type': 'application/json' },
-      body,
-    };
+    return new Response(body, { status: res.status, headers: CORS });
   } catch (err) {
     return json(502, { error: 'Upstream error: ' + err.message });
   }
 };
 
 function json(status, data) {
-  return {
-    statusCode: status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  };
+  return new Response(JSON.stringify(data), { status, headers: CORS });
 }
+
+export const config = { path: '/api/whoop' };

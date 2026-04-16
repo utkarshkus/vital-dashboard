@@ -1,7 +1,7 @@
-// whoop.js — calls /.netlify/functions/whoop (serverless proxy)
+// whoop.js — calls /api/whoop (serverless proxy)
 // Auth is handled server-side via OAuth. This file calls the proxy — no token in browser.
 
-const PROXY = '/.netlify/functions/whoop';
+const PROXY = '/api/whoop';
 
 const Whoop = {
   async _get(endpoint) {

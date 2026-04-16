@@ -2,11 +2,12 @@
   publish = "."
   functions = "netlify/functions"
 
-# Netlify Blobs is available by default on all Netlify sites with Functions.
-# Required env vars (set in Netlify UI → Site configuration → Environment variables):
+# Required env vars (Netlify UI → Site configuration → Environment variables):
 #   WHOOP_CLIENT_ID      — from developer.whoop.com
 #   WHOOP_CLIENT_SECRET  — from developer.whoop.com
-#   WHOOP_REDIRECT_URI   — https://YOUR-SITE.netlify.app/.netlify/functions/auth-callback
+#   WHOOP_REDIRECT_URI   — https://YOUR-SITE.netlify.app/api/auth-callback
+#
+# Also update the redirect URI in your WHOOP developer app to match.
 
 [[redirects]]
   from = "/*"

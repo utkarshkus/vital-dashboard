@@ -232,7 +232,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // ─── WHOOP auth status ─────────────────────────────────────────
 async function checkAuthStatus() {
   try {
-    const res = await fetch('/.netlify/functions/auth-status');
+    const res = await fetch('/api/auth-status');
     const data = await res.json();
 
     const banner = document.getElementById('authBanner');

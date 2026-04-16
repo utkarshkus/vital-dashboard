@@ -1,6 +1,6 @@
 // config.js — all user data stored server-side via Netlify Blobs
 //
-// SERVER fields (/.netlify/functions/config-get|set):
+// SERVER fields (via /api/config-get and /api/config-set):
 //   startWeight, currentWeight, targetWeight, stepTarget, manualSteps,
 //   wakeTime, sleepTime, caffeineProfile, caffeineDoses
 //
@@ -38,7 +38,7 @@ const Config = {
   // ─── Fetch all server fields ────────────────────────────────
   async _loadServer() {
     try {
-      const res = await fetch('/.netlify/functions/config-get');
+      const res = await fetch('/api/config-get');
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
       for (const [k, v] of Object.entries(data)) {
@@ -83,7 +83,7 @@ const Config = {
     }
 
     try {
-      const res = await fetch('/.netlify/functions/config-set', {
+      const res = await fetch('/api/config-set', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify(payload),

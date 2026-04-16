@@ -1,23 +1,18 @@
-// netlify/functions/lib/get-valid-token.js
-// Shared helper: reads stored tokens from Blobs, refreshes if expired.
-// Returns a valid access token or throws if auth is not set up.
+// netlify/functions/lib/get-valid-token.js  (ESM — imported by v2 functions)
+import { getStore } from '@netlify/blobs';
 
-async function getValidToken() {
-  const { getStore } = require('@netlify/blobs');
-  const store = getStore('vital-auth');
+export async function getValidToken() {
+  const store = getStore({ name: 'vital-auth', consistency: 'strong' });
+  const raw   = await store.get('tokens').catch(() => null);
 
-  const raw = await store.get('tokens').catch(() => null);
-  if (!raw) {
-    throw new Error('NOT_AUTHENTICATED');
-  }
+  if (!raw) throw new Error('NOT_AUTHENTICATED');
 
   const tokens = JSON.parse(raw);
-  // Token still valid — return it
-  if (Date.now() < tokens.expiresAt) {
-    return tokens.accessToken;
-  }
 
-  // Token expired — use refresh token to get a new one
+  // Token still valid
+  if (Date.now() < tokens.expiresAt) return tokens.accessToken;
+
+  // Expired — refresh
   const clientId     = process.env.WHOOP_CLIENT_ID;
   const clientSecret = process.env.WHOOP_CLIENT_SECRET;
 
@@ -33,13 +28,11 @@ async function getValidToken() {
       refresh_token: tokens.refreshToken,
       client_id:     clientId,
       client_secret: clientSecret,
-    }).toString(),
+    }),
   });
 
   if (!res.ok) {
-    const err = await res.text();
-    console.error('Token refresh failed:', err);
-    // Refresh token is invalid/revoked — wipe stored tokens so UI shows reconnect prompt
+    console.error('Token refresh failed:', await res.text());
     await store.delete('tokens').catch(() => {});
     throw new Error('REFRESH_FAILED');
   }
@@ -47,12 +40,10 @@ async function getValidToken() {
   const refreshed = await res.json();
   const updated = {
     accessToken:  refreshed.access_token,
-    refreshToken: refreshed.refresh_token || tokens.refreshToken, // WHOOP may not rotate refresh token
+    refreshToken: refreshed.refresh_token || tokens.refreshToken,
     expiresAt:    Date.now() + (refreshed.expires_in - 60) * 1000,
   };
 
   await store.set('tokens', JSON.stringify(updated));
   return updated.accessToken;
 }
-
-module.exports = { getValidToken };

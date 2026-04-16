@@ -1,46 +1,36 @@
-// netlify/functions/auth-status.js
-// Returns whether WHOOP tokens are stored and whether they are valid/expired.
-// Used by the dashboard on load to decide whether to show "Connect WHOOP".
+// netlify/functions/auth-status.js  (Netlify Functions v2)
+import { getStore } from '@netlify/blobs';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Content-Type': 'application/json',
 };
 
-exports.handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: CORS, body: '' };
+export default async (req, context) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: CORS });
   }
 
   try {
-    const { getStore } = require('@netlify/blobs');
-    const store = getStore('vital-auth');
-    const raw = await store.get('tokens').catch(() => null);
+    const store = getStore({ name: 'vital-auth', consistency: 'strong' });
+    const raw   = await store.get('tokens').catch(() => null);
 
     if (!raw) {
-      return respond({ connected: false });
+      return json({ connected: false });
     }
 
-    const tokens = JSON.parse(raw);
+    const tokens  = JSON.parse(raw);
     const expired = Date.now() >= tokens.expiresAt;
 
-    // If expired but refresh token exists, it can auto-renew — still "connected"
-    return respond({
-      connected:    true,
-      expired,
-      canRefresh:   !!tokens.refreshToken,
-    });
+    return json({ connected: true, expired, canRefresh: !!tokens.refreshToken });
 
   } catch (err) {
-    return respond({ connected: false, error: err.message });
-  }
-
-  function respond(data) {
-    return {
-      statusCode: 200,
-      headers: { ...CORS, 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    };
+    return json({ connected: false, error: err.message });
   }
 };
+
+function json(data) {
+  return new Response(JSON.stringify(data), { status: 200, headers: CORS });
+}
+
+export const config = { path: '/api/auth-status' };
