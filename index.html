@@ -122,6 +122,7 @@
       <div class="score-row"><span class="smeta-key">Duration</span><span class="smeta-val" id="sleepDuration">—</span></div>
       <div class="score-row"><span class="smeta-key">Efficiency</span><span class="smeta-val" id="sleepEfficiency">—</span></div>
       <div class="score-row"><span class="smeta-key">REM</span><span class="smeta-val" id="sleepRem">—</span></div>
+      <div class="score-row"><span class="smeta-key" id="sleepOnsetTime">Slept —</span><span class="smeta-val" id="sleepWakeTime">Woke —</span></div>
     </div>
     <p class="commentary" id="sleepCommentary">Configure WHOOP token to load sleep data.</p>
   </div>
@@ -145,6 +146,9 @@
       <div class="score-row"><span class="smeta-key">HRV</span><span class="smeta-val" id="recoveryHrv">—</span></div>
       <div class="score-row"><span class="smeta-key">Resting HR</span><span class="smeta-val" id="recoveryRhr">—</span></div>
       <div class="score-row"><span class="smeta-key">SpO2</span><span class="smeta-val" id="recoverySpo2">—</span></div>
+      <div class="score-row"><span class="smeta-key">Strain</span><span class="smeta-val" id="cycleStrain">—</span></div>
+      <div class="score-row"><span class="smeta-key">Avg HR</span><span class="smeta-val" id="cycleHr">—</span></div>
+      <div class="score-row"><span class="smeta-key">Energy</span><span class="smeta-val" id="cycleKj">—</span></div>
     </div>
     <p class="commentary" id="recoveryCommentary">Configure WHOOP token to load recovery data.</p>
   </div>
@@ -178,7 +182,7 @@
         <span class="step-stat-val" id="stepPct">—</span>
       </div>
     </div>
-    <div class="step-note">Steps loaded from device/health API. <button class="link-btn" id="manualStepsBtn">Log manually</button></div>
+    <div class="step-note">WHOOP doesn't track steps — log manually or sync from Apple Health. <button class="link-btn" id="manualStepsBtn">Enter count</button></div>
     <div class="manual-steps-wrap" id="manualStepsWrap" style="display:none">
       <input type="number" id="manualStepsInput" placeholder="Enter step count" />
       <button class="btn-small" id="manualStepsSave">Set</button>

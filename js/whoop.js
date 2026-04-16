@@ -32,14 +32,26 @@ const Whoop = {
     const totalHours = totalMs / 3600000;
     const remMs = sp.total_rem_sleep_time_milli || 0;
 
+    // Actual wake = end of sleep session; actual sleep onset = start
+    const toHHMM = iso => {
+      if (!iso) return null;
+      const d = new Date(iso);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    };
+
     return {
-      score: Math.round(s.sleep_performance_percentage || 0),
-      durationH: totalHours.toFixed(1),
+      score:      Math.round(s.sleep_performance_percentage || 0),
+      durationH:  totalHours.toFixed(1),
       efficiency: Math.round(s.sleep_efficiency_percentage || 0),
-      remMin: Math.round(remMs / 60000),
-      startTime: record.start,
-      endTime: record.end,
-      raw: record,
+      remMin:     Math.round(remMs / 60000),
+      deepMin:    Math.round((sp.total_slow_wave_sleep_time_milli || 0) / 60000),
+      lightMin:   Math.round((sp.total_light_sleep_time_milli || 0) / 60000),
+      startTime:  record.start,          // actual sleep onset (ISO)
+      endTime:    record.end,            // actual wake time (ISO)
+      wakeHHMM:   toHHMM(record.end),   // e.g. "06:47" — feeds caffeine window
+      sleepHHMM:  toHHMM(record.start), // e.g. "22:31"
+      nap:        record.nap || false,
+      raw:        record,
     };
   },
 
@@ -57,6 +69,22 @@ const Whoop = {
       spo2: ((s.spo2_percentage || 0)).toFixed(1),
       skinTemp: parseFloat((s.skin_temp_celsius || 0).toFixed(2)),
       raw: record,
+    };
+  },
+
+  // Today's physiological cycle — strain, kilojoules, avg HR
+  async getCycle() {
+    const data = await this._get('/cycle?limit=1');
+    const record = data.records?.[0];
+    if (!record) return null;
+    const s = record.score || {};
+    return {
+      strain:    s.strain ? parseFloat(s.strain.toFixed(1)) : null,
+      kilojoule: s.kilojoule ? Math.round(s.kilojoule) : null,
+      avgHr:     s.average_heart_rate ? Math.round(s.average_heart_rate) : null,
+      start:     record.start,
+      end:       record.end,
+      raw:       record,
     };
   },
 

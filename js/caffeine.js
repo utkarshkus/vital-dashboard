@@ -185,7 +185,8 @@ const CaffeineTracker = {
   // ─── Curve builder ───────────────────────────────────────
   _buildCurve() {
     const now      = new Date();
-    const wakeStr  = Config.get('wakeTime')  || '06:30';
+    // Prefer actual WHOOP wake time if available, fall back to configured
+    const wakeStr  = window._whoopWakeTime || Config.get('wakeTime')  || '06:30';
     const sleepStr = Config.get('sleepTime') || '22:30';
 
     const parseTime = (str, base) => {

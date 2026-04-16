@@ -96,15 +96,34 @@ async function loadSleep() {
   try {
     const s = await Whoop.getSleep();
     if (!s) return;
+
     document.getElementById('sleepScoreText').textContent  = s.score;
     document.getElementById('sleepDuration').textContent   = s.durationH + 'h';
     document.getElementById('sleepEfficiency').textContent = s.efficiency + '%';
     document.getElementById('sleepRem').textContent        = s.remMin + 'min';
+
+    // Show actual wake time if available
+    if (s.wakeHHMM) {
+      const wakeEl = document.getElementById('sleepWakeTime');
+      if (wakeEl) wakeEl.textContent = 'Woke ' + s.wakeHHMM;
+    }
+    // Show actual sleep onset
+    if (s.sleepHHMM) {
+      const onsetEl = document.getElementById('sleepOnsetTime');
+      if (onsetEl) onsetEl.textContent = 'Slept ' + s.sleepHHMM;
+    }
+
     document.getElementById('sleepCommentary').textContent = sleepLabel(s.score);
     const offset = 314 * (1 - s.score / 100);
     document.getElementById('sleepRingFill').style.strokeDashoffset = offset.toFixed(1);
     const scoreColor = s.score >= 85 ? '#a0f0b0' : s.score >= 60 ? '#f0c070' : '#f07070';
     document.getElementById('sleepRingFill').style.stroke = scoreColor;
+
+    // Feed actual wake time into caffeine window (overrides manual config)
+    if (s.wakeHHMM && !s.nap) {
+      window._whoopWakeTime = s.wakeHHMM;
+      CaffeineTracker.render(); // re-render with actual wake time
+    }
   } catch (e) {
     console.warn('Sleep load error:', e.message);
     if (e.message === 'NOT_AUTHENTICATED') { handleWhoopAuthError(); return; }
@@ -190,6 +209,24 @@ function renderTempChart(data) {
   });
 }
 
+// ─── WHOOP: Today's cycle (strain) ────────────────────────────
+async function loadCycle() {
+  try {
+    const cy = await Whoop.getCycle();
+    if (!cy) return;
+
+    const strainEl = document.getElementById('cycleStrain');
+    const kjEl     = document.getElementById('cycleKj');
+    const hrEl     = document.getElementById('cycleHr');
+    if (strainEl && cy.strain !== null) strainEl.textContent = cy.strain;
+    if (kjEl     && cy.kilojoule !== null) kjEl.textContent  = cy.kilojoule + ' kJ';
+    if (hrEl     && cy.avgHr !== null)     hrEl.textContent  = cy.avgHr + ' bpm';
+  } catch (e) {
+    if (e.message === 'NOT_AUTHENTICATED') { handleWhoopAuthError(); return; }
+    console.warn('Cycle load error:', e.message);
+  }
+}
+
 // ─── Boot ──────────────────────────────────────────────────────
 async function boot() {
   setSyncStatus('', 'loading config…');
@@ -209,7 +246,7 @@ async function boot() {
   // Fetch WHOOP data
   setSyncStatus('', 'fetching WHOOP…');
   try {
-    await Promise.all([loadSleep(), loadRecovery(), loadTempTrend()]);
+    await Promise.all([loadSleep(), loadRecovery(), loadTempTrend(), loadCycle()]);
     setSyncStatus('live', 'synced ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
   } catch (e) {
     setSyncStatus('error', 'WHOOP sync error');
