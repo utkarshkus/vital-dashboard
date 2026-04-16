@@ -1,36 +1,33 @@
-// netlify/functions/auth-status.js  (Netlify Functions v2)
-import { getStore } from '@netlify/blobs';
+// netlify/functions/auth-status.js
+// Returns WHOOP connection status — connected, expired, canRefresh.
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Content-Type': 'application/json',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
 };
 
-export default async (req, context) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: CORS });
+exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 204, headers: CORS, body: '' };
   }
 
   try {
+    const { getStore } = require('@netlify/blobs');
     const store = getStore({ name: 'vital-auth', consistency: 'strong' });
     const raw   = await store.get('tokens').catch(() => null);
 
-    if (!raw) {
-      return json({ connected: false });
-    }
+    if (!raw) return json({ connected: false });
 
     const tokens  = JSON.parse(raw);
     const expired = Date.now() >= tokens.expiresAt;
-
     return json({ connected: true, expired, canRefresh: !!tokens.refreshToken });
 
   } catch (err) {
     return json({ connected: false, error: err.message });
   }
+
+  function json(data) {
+    return { statusCode: 200, headers: { ...CORS, 'Content-Type': 'application/json' }, body: JSON.stringify(data) };
+  }
 };
-
-function json(data) {
-  return new Response(JSON.stringify(data), { status: 200, headers: CORS });
-}
-
-export const config = { path: '/api/auth-status' };

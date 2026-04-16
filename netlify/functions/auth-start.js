@@ -1,29 +1,34 @@
-// netlify/functions/auth-start.js  (Netlify Functions v2)
-import crypto from 'crypto';
-import { getStore } from '@netlify/blobs';
+// netlify/functions/auth-start.js
+// Generates OAuth state, stores in Blobs, redirects to WHOOP auth page.
+// Reached via /api/auth-start → /.netlify/functions/auth-start (netlify.toml)
 
-export default async (req, context) => {
+const crypto = require('crypto');
+
+exports.handler = async (event, context) => {
   const clientId    = process.env.WHOOP_CLIENT_ID;
   const redirectUri = process.env.WHOOP_REDIRECT_URI;
 
   if (!clientId || !redirectUri) {
-    return new Response(
-      JSON.stringify({ error: 'WHOOP_CLIENT_ID or WHOOP_REDIRECT_URI env var not set.' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'WHOOP_CLIENT_ID or WHOOP_REDIRECT_URI env var not set.' }),
+    };
   }
 
   const state = crypto.randomBytes(16).toString('hex');
 
   try {
+    const { getStore } = require('@netlify/blobs');
     const store = getStore({ name: 'vital-auth', consistency: 'strong' });
     await store.set('oauth-state', state, { ttl: 600 });
   } catch (err) {
     console.error('Blobs set failed:', err.message);
-    return new Response(
-      JSON.stringify({ error: 'Could not initialise auth session.', detail: err.message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Could not initialise auth session.', detail: err.message }),
+    };
   }
 
   const scopes = 'read:recovery read:sleep read:profile read:body_measurement';
@@ -34,10 +39,9 @@ export default async (req, context) => {
   authUrl.searchParams.set('scope', scopes);
   authUrl.searchParams.set('state', state);
 
-  return new Response(null, {
-    status: 302,
+  return {
+    statusCode: 302,
     headers: { Location: authUrl.toString() },
-  });
+    body: '',
+  };
 };
-
-export const config = { path: '/api/auth-start' };

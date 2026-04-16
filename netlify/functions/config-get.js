@@ -1,25 +1,15 @@
-// netlify/functions/config-get.js  (Netlify Functions v2)
-import { getStore } from '@netlify/blobs';
+// netlify/functions/config-get.js
+const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'GET, OPTIONS' };
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Content-Type': 'application/json',
-};
-
-export default async (req, context) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: CORS });
-  }
-
+exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: CORS, body: '' };
   try {
+    const { getStore } = require('@netlify/blobs');
     const store = getStore({ name: 'vital-config', consistency: 'strong' });
     const raw   = await store.get('user-config').catch(() => null);
-    const data  = raw ? JSON.parse(raw) : {};
-    return new Response(JSON.stringify(data), { status: 200, headers: CORS });
+    return { statusCode: 200, headers: { ...CORS, 'Content-Type': 'application/json' }, body: raw || '{}' };
   } catch (err) {
     console.warn('Blobs unavailable:', err.message);
-    return new Response(JSON.stringify({}), { status: 200, headers: CORS });
+    return { statusCode: 200, headers: { ...CORS, 'Content-Type': 'application/json' }, body: '{}' };
   }
 };
-
-export const config = { path: '/api/config-get' };

@@ -5,13 +5,19 @@
 # Required env vars (Netlify UI → Site configuration → Environment variables):
 #   WHOOP_CLIENT_ID      — from developer.whoop.com
 #   WHOOP_CLIENT_SECRET  — from developer.whoop.com
-#   WHOOP_REDIRECT_URI   — https://YOUR-SITE.netlify.app/api/auth-callback
-#
-# Also update the redirect URI in your WHOOP developer app to match.
+#   WHOOP_REDIRECT_URI   — https://YOUR-SITE.netlify.app/.netlify/functions/auth-callback
 
+# /api/* → /.netlify/functions/:splat  (must come BEFORE the catch-all)
 [[redirects]]
-  from = "/*"
-  to = "/index.html"
+  from   = "/api/*"
+  to     = "/.netlify/functions/:splat"
+  status = 200
+  force  = true
+
+# SPA catch-all — serves index.html for all non-file, non-api routes
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
   status = 200
 
 [[headers]]

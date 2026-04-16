@@ -1,21 +1,18 @@
-// netlify/functions/auth-callback.js  (Netlify Functions v2)
-import { getStore } from '@netlify/blobs';
+// netlify/functions/auth-callback.js
+// Receives ?code= from WHOOP, validates state, exchanges for tokens, stores in Blobs.
 
-export default async (req, context) => {
-  const url    = new URL(req.url);
-  const code   = url.searchParams.get('code');
-  const state  = url.searchParams.get('state');
-  const error  = url.searchParams.get('error');
-  const errDesc = url.searchParams.get('error_description');
+exports.handler = async (event, context) => {
+  const { code, state, error, error_description } = event.queryStringParameters || {};
 
   if (error) {
-    return redirect(`/?auth=error&reason=${encodeURIComponent(errDesc || error)}`);
+    return redirect(`/?auth=error&reason=${encodeURIComponent(error_description || error)}`);
   }
   if (!state || !code) {
     return redirect('/?auth=error&reason=missing_params');
   }
 
   try {
+    const { getStore } = require('@netlify/blobs');
     const store = getStore({ name: 'vital-auth', consistency: 'strong' });
 
     const storedState = await store.get('oauth-state').catch(() => null);
@@ -41,7 +38,7 @@ export default async (req, context) => {
         client_id:     clientId,
         client_secret: clientSecret,
         redirect_uri:  redirectUri,
-      }),
+      }).toString(),
     });
 
     if (!res.ok) {
@@ -66,7 +63,5 @@ export default async (req, context) => {
 };
 
 function redirect(location) {
-  return new Response(null, { status: 302, headers: { Location: location } });
+  return { statusCode: 302, headers: { Location: location }, body: '' };
 }
-
-export const config = { path: '/api/auth-callback' };

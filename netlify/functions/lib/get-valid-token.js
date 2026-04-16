@@ -1,24 +1,20 @@
-// netlify/functions/lib/get-valid-token.js  (ESM — imported by v2 functions)
-import { getStore } from '@netlify/blobs';
+// netlify/functions/lib/get-valid-token.js
+// Shared helper — returns a valid WHOOP access token, refreshing if expired.
 
-export async function getValidToken() {
+async function getValidToken() {
+  const { getStore } = require('@netlify/blobs');
   const store = getStore({ name: 'vital-auth', consistency: 'strong' });
   const raw   = await store.get('tokens').catch(() => null);
 
   if (!raw) throw new Error('NOT_AUTHENTICATED');
 
   const tokens = JSON.parse(raw);
-
-  // Token still valid
   if (Date.now() < tokens.expiresAt) return tokens.accessToken;
 
-  // Expired — refresh
+  // Expired — use refresh token
   const clientId     = process.env.WHOOP_CLIENT_ID;
   const clientSecret = process.env.WHOOP_CLIENT_SECRET;
-
-  if (!clientId || !clientSecret) {
-    throw new Error('WHOOP_CLIENT_ID / WHOOP_CLIENT_SECRET env vars not set');
-  }
+  if (!clientId || !clientSecret) throw new Error('Missing WHOOP env vars');
 
   const res = await fetch('https://api.prod.whoop.com/oauth/oauth2/token', {
     method: 'POST',
@@ -28,7 +24,7 @@ export async function getValidToken() {
       refresh_token: tokens.refreshToken,
       client_id:     clientId,
       client_secret: clientSecret,
-    }),
+    }).toString(),
   });
 
   if (!res.ok) {
@@ -43,7 +39,8 @@ export async function getValidToken() {
     refreshToken: refreshed.refresh_token || tokens.refreshToken,
     expiresAt:    Date.now() + (refreshed.expires_in - 60) * 1000,
   };
-
   await store.set('tokens', JSON.stringify(updated));
   return updated.accessToken;
 }
+
+module.exports = { getValidToken };
