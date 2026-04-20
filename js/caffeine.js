@@ -236,18 +236,137 @@ const CaffeineTracker = {
     const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
     const textColor = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)';
 
-    // Badge: show caffeine + effective paraxanthine load
-    const currCaff = Math.round(this._caffeineOnlyAt(now));
-    const currPx   = Math.round(this._paraxanthineOnlyAt(now));
-    const currTotal = currCaff + currPx;
-    document.getElementById('caffeineBadge').textContent =
-      currTotal > 0
-        ? currCaff + 'mg caffeine + ' + currPx + 'mg-eq paraxanthine'
-        : '0mg active';
-
-    // Effective half-life display
+    // Effective half-life
     const ke = PK.ke_base / this._modifier;
-    const effectiveHL = (Math.LN2 / ke).toFixed(1);
+    const effectiveHL = Math.LN2 / ke;
+
+    // Current total load
+    const currCaff  = Math.round(this._caffeineOnlyAt(now));
+    const currPx    = Math.round(this._paraxanthineOnlyAt(now));
+    const currTotal = currCaff + currPx;
+
+    // ── New design elements ──────────────────────────────
+
+    const THRESHOLD_MG = 40;
+    const REF_DOSE_MG  = 200;
+    const fmtT = (d) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    // Clear-by time: scan forward until total drops below threshold
+    let clearByTime = null;
+    if (this._doses.length > 0) {
+      const scanEnd = new Date(now.getTime() + 30 * 3600000);
+      for (let t = new Date(now.getTime() + 15 * 60000); t <= scanEnd; t = new Date(t.getTime() + 15 * 60000)) {
+        if (this._totalAt(t) < THRESHOLD_MG) { clearByTime = t; break; }
+      }
+    }
+
+    // Cutoff time: last safe single dose (REF_DOSE_MG) before bedtime
+    const cutoffOffset = 0.75 + effectiveHL * Math.log2(REF_DOSE_MG / THRESHOLD_MG);
+    const cutoffDate   = new Date(sleep.getTime() - cutoffOffset * 3600000);
+
+    // First dose (earliest logged)
+    const firstDose = this._doses.length > 0
+      ? this._doses.reduce((min, d) => d.time < min.time ? d : min, this._doses[0])
+      : null;
+
+    // Phase label + dot color
+    let phaseLabel, phaseDotColor;
+    if (!firstDose) {
+      phaseLabel    = 'No caffeine';
+      phaseDotColor = 'var(--text3)';
+    } else {
+      const hSince = (now - firstDose.time) / 3600000;
+      if (hSince < 0) {
+        phaseLabel = 'Pre-dose'; phaseDotColor = 'var(--text3)';
+      } else if (hSince < 0.75) {
+        phaseLabel = 'Onset'; phaseDotColor = 'var(--warn)';
+      } else if (hSince < effectiveHL * 1.5 && currTotal > THRESHOLD_MG) {
+        phaseLabel = 'Peak focus'; phaseDotColor = 'var(--accent2)';
+      } else if (currTotal > THRESHOLD_MG) {
+        phaseLabel = 'Clearance'; phaseDotColor = 'var(--danger)';
+      } else {
+        phaseLabel = 'Cleared'; phaseDotColor = 'var(--text3)';
+      }
+    }
+
+    // Update phase pill
+    const phLabelEl = document.getElementById('caffPhaseLabel');
+    const phDotEl   = document.getElementById('caffPhaseDot');
+    if (phLabelEl) phLabelEl.textContent = phaseLabel;
+    if (phDotEl)   phDotEl.style.background = phaseDotColor;
+
+    // Update readout
+    const currEl   = document.getElementById('caffCurrent');
+    const hlEl     = document.getElementById('caffHalfLife');
+    const clearByEl = document.getElementById('caffClearBy');
+    if (currEl)    currEl.textContent    = currTotal;
+    if (hlEl)      hlEl.textContent      = effectiveHL.toFixed(1);
+    if (clearByEl) {
+      clearByEl.textContent = clearByTime
+        ? fmtT(clearByTime)
+        : (this._doses.length > 0 ? '> 30h' : '—');
+    }
+
+    // Phase bar
+    const barEl     = document.getElementById('caffBar');
+    const nowMarkEl = document.getElementById('caffNowMark');
+    const daySpan   = sleep - wake;
+    const wakePct   = (d) => Math.max(0, Math.min(100, ((d - wake) / daySpan) * 100));
+
+    if (barEl && nowMarkEl) {
+      nowMarkEl.style.left = wakePct(now).toFixed(1) + '%';
+      if (firstDose) {
+        const peakStart = new Date(firstDose.time.getTime() + 0.75 * 3600000);
+        const peakEnd   = new Date(firstDose.time.getTime() + effectiveHL * 1.5 * 3600000);
+        const clrEnd    = clearByTime || sleep;
+        const os = wakePct(firstDose.time).toFixed(1);
+        const ps = wakePct(peakStart).toFixed(1);
+        const pe = wakePct(peakEnd).toFixed(1);
+        const ce = wakePct(clrEnd).toFixed(1);
+        barEl.style.background = [
+          `linear-gradient(90deg,`,
+          `var(--surface2) 0%,`,
+          `var(--surface2) ${os}%,`,
+          `var(--warn) ${os}%,`,
+          `var(--warn) ${ps}%,`,
+          `var(--accent2) ${ps}%,`,
+          `var(--accent2) ${pe}%,`,
+          `var(--danger) ${pe}%,`,
+          `var(--danger) ${ce}%,`,
+          `var(--surface2) ${ce}%,`,
+          `var(--surface2) 100%)`
+        ].join(' ');
+      } else {
+        barEl.style.background = 'var(--surface2)';
+      }
+    }
+
+    // Tick labels
+    const tickWake  = document.getElementById('caffTickWake');
+    const tickOnset = document.getElementById('caffTickOnset');
+    const tickPeak  = document.getElementById('caffTickPeak');
+    const tickClear = document.getElementById('caffTickClear');
+    const tickBed   = document.getElementById('caffTickBed');
+    if (tickWake)  tickWake.textContent  = fmtT(wake);
+    if (tickBed)   tickBed.textContent   = fmtT(sleep);
+    if (firstDose) {
+      const peakEnd = new Date(firstDose.time.getTime() + effectiveHL * 1.5 * 3600000);
+      if (tickOnset) tickOnset.textContent = fmtT(firstDose.time);
+      if (tickPeak)  tickPeak.textContent  = fmtT(peakEnd);
+      if (tickClear) tickClear.textContent = clearByTime ? fmtT(clearByTime) : '—';
+    } else {
+      if (tickOnset) tickOnset.textContent = '—';
+      if (tickPeak)  tickPeak.textContent  = '—';
+      if (tickClear) tickClear.textContent = '—';
+    }
+
+    // Footer cutoff
+    const cutoffEl = document.getElementById('caffCutoff');
+    if (cutoffEl) {
+      cutoffEl.textContent = cutoffDate > now ? fmtT(cutoffDate) : 'past';
+    }
+
+    // ── Chart.js ─────────────────────────────────────────
 
     const annotations = [];
     if (sleepIdx > 0 && sleepIdx < labels.length) {
@@ -375,7 +494,7 @@ const CaffeineTracker = {
       }
     });
 
-    this._renderLog(effectiveHL);
+    this._renderLog(effectiveHL.toFixed(1));
   },
 
   _renderLog(effectiveHL) {
