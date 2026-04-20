@@ -12,7 +12,7 @@ function initTheme() {
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('vital_theme', next);
     setTimeout(function() {
-      WeightTracker.render();
+      WeightTracker.render();  // render() only — UI already bound by init()
       CaffeineTracker.render();
       renderTempChart(lastTempData);
     }, 50);
@@ -233,7 +233,7 @@ async function boot() {
   await Config.init();
 
   // Render local tiles now that config is populated
-  WeightTracker.render();
+  WeightTracker.render();   // re-render only; init() already bound UI at startup
   CaffeineTracker.render();
 
   // Check WHOOP auth before attempting API calls
@@ -257,6 +257,7 @@ initConfig();
 
 document.addEventListener('DOMContentLoaded', function() {
   handleAuthRedirect();
+  WeightTracker.init();
   CaffeineTracker.init();
   boot();
   setInterval(boot, 15 * 60 * 1000);

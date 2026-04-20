@@ -1,103 +1,150 @@
-// weight.js — Weight journey chart
+// weight.js — Daily weight logging with server-side persistence
 
 const WeightTracker = {
   _chart: null,
 
+  init() {
+    this._bindUI();
+    this.render();
+  },
+
+  _bindUI() {
+    const btn     = document.getElementById('logWeightBtn');
+    const inp     = document.getElementById('logWeightInput');
+    const dateInp = document.getElementById('logWeightDate');
+
+    if (dateInp) dateInp.value = new Date().toISOString().slice(0, 10);
+    if (btn) btn.addEventListener('click', () => this._logEntry());
+    if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') this._logEntry(); });
+  },
+
+  async _logEntry() {
+    const inp     = document.getElementById('logWeightInput');
+    const dateInp = document.getElementById('logWeightDate');
+    if (!inp) return;
+
+    const val = parseFloat(inp.value);
+    if (isNaN(val) || val <= 0 || val > 500) return;
+
+    const today   = new Date().toISOString().slice(0, 10);
+    const dateStr = (dateInp && dateInp.value) ? dateInp.value : today;
+
+    const logs = (Config.get('weightLogs') || []).slice();
+
+    // Upsert: overwrite if same date already logged
+    const idx = logs.findIndex(l => l.date === dateStr);
+    if (idx >= 0) {
+      logs[idx] = { date: dateStr, weight: val };
+    } else {
+      logs.push({ date: dateStr, weight: val });
+    }
+    logs.sort((a, b) => a.date.localeCompare(b.date));
+
+    // Keep at most 365 entries
+    if (logs.length > 365) logs.splice(0, logs.length - 365);
+
+    await Config.set('weightLogs', logs);
+
+    // Keep currentWeight in sync with the most recent entry
+    const latest = logs[logs.length - 1];
+    if (latest) await Config.set('currentWeight', latest.weight);
+
+    inp.value = '';
+    if (dateInp) dateInp.value = today;
+
+    this.render();
+  },
+
   render() {
-    const start = parseFloat(Config.get('startWeight'));
-    const current = parseFloat(Config.get('currentWeight'));
+    const start  = parseFloat(Config.get('startWeight'));
     const target = parseFloat(Config.get('targetWeight'));
+    const logs   = (Config.get('weightLogs') || []).slice()
+                   .sort((a, b) => a.date.localeCompare(b.date));
+
+    const lastLog = logs.length > 0 ? logs[logs.length - 1] : null;
+    const curr    = lastLog ? lastLog.weight
+                            : parseFloat(Config.get('currentWeight'));
 
     if (isNaN(start) || isNaN(target)) {
-      document.getElementById('wStart').textContent = '—';
-      document.getElementById('wNow').textContent = '—';
-      document.getElementById('wTarget').textContent = '—';
+      document.getElementById('wStart').textContent   = '—';
+      document.getElementById('wNow').textContent     = '—';
+      document.getElementById('wTarget').textContent  = '—';
       document.getElementById('weightBadge').textContent = 'Setup needed';
+      if (this._chart) { this._chart.destroy(); this._chart = null; }
+      this._renderLog([]);
       return;
     }
 
-    const curr = isNaN(current) ? start : current;
-    const lost = parseFloat((start - curr).toFixed(1));
-    const toGo = parseFloat((curr - target).toFixed(1));
-    const totalDrop = start - target;
-    const pct = totalDrop > 0 ? Math.round(((start - curr) / totalDrop) * 100) : 0;
+    const lost = parseFloat((start - (isNaN(curr) ? start : curr)).toFixed(1));
+    document.getElementById('wStart').textContent  = start + ' kg';
+    document.getElementById('wNow').textContent    = isNaN(curr) ? '—' : curr + ' kg';
+    document.getElementById('wTarget').textContent = target + ' kg';
+    document.getElementById('weightBadge').textContent =
+      lost > 0 ? '↓' + Math.abs(lost) + ' kg lost' :
+      lost < 0 ? '↑' + Math.abs(lost) + ' kg gained' : 'No change';
 
-    document.getElementById('wStart').textContent = `${start} kg`;
-    document.getElementById('wNow').textContent = `${curr} kg`;
-    document.getElementById('wTarget').textContent = `${target} kg`;
-    document.getElementById('weightBadge').textContent = `${lost > 0 ? '↓' : ''}${Math.abs(lost)} kg lost`;
-
-    const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+    const isDark    = document.documentElement.getAttribute('data-theme') !== 'light';
     const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
     const textColor = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)';
 
-    // Build a simple projected line: start → current (actual) → target (projected)
-    // We simulate ~weekly data points assuming linear progress
-    const weeks = 16;
-    const labels = [];
-    const actual = [];
-    const projected = [];
+    // Date range: first log (or today) up to today, capped at 90 days back
+    const today       = new Date(); today.setHours(0, 0, 0, 0);
+    const ninetyAgo   = new Date(today.getTime() - 90 * 24 * 3600 * 1000);
+    const fromDate    = logs.length > 0
+      ? new Date(Math.max(new Date(logs[0].date).getTime(), ninetyAgo.getTime()))
+      : today;
 
-    for (let i = 0; i <= weeks; i++) {
-      labels.push(`W${i}`);
-      const fraction = i / weeks;
-      const projected_weight = parseFloat((start - (start - target) * fraction).toFixed(1));
-      projected.push(projected_weight);
+    // Build log map
+    const logMap = {};
+    logs.forEach(l => { logMap[l.date] = l.weight; });
+
+    const labels      = [];
+    const actualData  = [];
+    const targetLine  = [];
+
+    for (let d = new Date(fromDate); d <= today; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().slice(0, 10);
+      labels.push(dateStr);
+      actualData.push(logMap[dateStr] !== undefined ? logMap[dateStr] : null);
+      targetLine.push(target);
     }
 
-    // Current is at the appropriate week index based on lost weight
-    const currWeek = Math.round(((start - curr) / (start - target || 1)) * weeks);
-    for (let i = 0; i <= currWeek; i++) {
-      actual.push(start - (start - curr) * (i / Math.max(currWeek, 1)));
-    }
+    // Y-axis bounds from all logged + boundary weights
+    const allW   = logs.map(l => l.weight).concat([start, target]).filter(w => !isNaN(w));
+    const minY   = allW.length > 0 ? Math.floor(Math.min(...allW) - 1) : target - 2;
+    const maxY   = allW.length > 0 ? Math.ceil(Math.max(...allW) + 1)  : start + 2;
 
     const ctx = document.getElementById('weightChart').getContext('2d');
     if (this._chart) { this._chart.destroy(); this._chart = null; }
 
-    // Current marker
-    const currentPointPlugin = {
-      id: 'currentMarker',
-      afterDraw(chart) {
-        const ds0 = chart.getDatasetMeta(0);
-        if (!ds0.data.length) return;
-        const last = ds0.data[ds0.data.length - 1];
-        const { ctx } = chart;
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(last.x, last.y, 6, 0, Math.PI * 2);
-        ctx.fillStyle = isDark ? '#a0f0b0' : '#1a9e50';
-        ctx.fill();
-        ctx.strokeStyle = isDark ? '#161820' : '#fff';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.restore();
-      }
-    };
-
     this._chart = new Chart(ctx, {
       type: 'line',
-      plugins: [currentPointPlugin],
       data: {
         labels,
         datasets: [
           {
-            label: 'Actual',
-            data: actual,
+            label: 'Weight',
+            data: actualData,
             borderColor: isDark ? '#a0f0b0' : '#1a9e50',
-            backgroundColor: 'transparent',
+            backgroundColor: isDark ? 'rgba(160,240,176,0.1)' : 'rgba(26,158,80,0.07)',
             borderWidth: 2.5,
-            pointRadius: 0,
+            pointRadius: 4,
+            pointBackgroundColor: isDark ? '#a0f0b0' : '#1a9e50',
+            pointBorderColor: isDark ? '#161820' : '#fff',
+            pointBorderWidth: 1.5,
+            spanGaps: true,
             tension: 0.3,
+            fill: false,
           },
           {
-            label: 'Target trajectory',
-            data: projected,
-            borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
+            label: 'Target',
+            data: targetLine,
+            borderColor: isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.15)',
             backgroundColor: 'transparent',
             borderWidth: 1.5,
             pointRadius: 0,
             borderDash: [5, 5],
-            tension: 0.3,
+            tension: 0,
           }
         ]
       },
@@ -107,8 +154,13 @@ const WeightTracker = {
         plugins: {
           legend: { display: false },
           tooltip: {
+            filter: item => item.parsed.y !== null && item.datasetIndex === 0,
             callbacks: {
-              label: ctx => `${ctx.parsed.y.toFixed(1)} kg`,
+              title: items => {
+                const d = new Date(items[0].label);
+                return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+              },
+              label: ctx => ctx.parsed.y.toFixed(1) + ' kg',
             }
           }
         },
@@ -117,18 +169,24 @@ const WeightTracker = {
             ticks: {
               color: textColor,
               font: { size: 9, family: 'DM Mono' },
-              maxTicksLimit: 8,
+              maxTicksLimit: 6,
+              maxRotation: 0,
+              callback: function(val) {
+                const label = this.getLabelForValue(val);
+                const d = new Date(label);
+                return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+              }
             },
             grid: { color: gridColor },
             border: { display: false },
           },
           y: {
-            min: parseFloat((target - 1).toFixed(0)),
-            max: parseFloat((start + 0.5).toFixed(0)),
+            min: minY,
+            max: maxY,
             ticks: {
               color: textColor,
               font: { size: 9, family: 'DM Mono' },
-              callback: v => `${v}kg`,
+              callback: v => v + 'kg',
             },
             grid: { color: gridColor },
             border: { display: false },
@@ -136,5 +194,24 @@ const WeightTracker = {
         }
       }
     });
-  }
+
+    this._renderLog(logs);
+  },
+
+  _renderLog(logs) {
+    const container = document.getElementById('weightLog');
+    if (!container) return;
+    container.innerHTML = '';
+    if (logs.length === 0) return;
+
+    const recent = logs.slice(-5).reverse();
+    recent.forEach(function(entry) {
+      const pill = document.createElement('div');
+      pill.className = 'weight-log-pill';
+      const d = new Date(entry.date);
+      const label = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      pill.innerHTML = label + ' <strong>' + entry.weight + ' kg</strong>';
+      container.appendChild(pill);
+    });
+  },
 };
