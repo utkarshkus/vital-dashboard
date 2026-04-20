@@ -15,6 +15,7 @@ const SERVER_KEYS = new Set([
   'sleepTime',
   'caffeineProfile',
   'caffeineDoses',   // array — managed by CaffeineTracker
+  'weightLogs',      // array — managed by WeightTracker
 ]);
 
 const DEFAULTS = {
@@ -25,6 +26,7 @@ const DEFAULTS = {
   sleepTime:      '22:30',
   caffeineProfile:'default',
   caffeineDoses:  [],
+  weightLogs:     [],
 };
 
 const Config = {

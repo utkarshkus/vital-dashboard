@@ -247,6 +247,65 @@ body {
 .wstat-label { font-size: 0.65rem; color: var(--text3); letter-spacing: 0.05em; }
 .wstat-val { font-size: 1rem; font-weight: 500; color: var(--text); }
 
+/* Weight log input row */
+.weight-log-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.weight-date-input,
+.weight-val-input {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  padding: 5px 10px;
+  border-radius: 20px;
+  cursor: pointer;
+  color-scheme: dark;
+}
+.weight-date-input { flex: 1 1 auto; min-width: 0; }
+.weight-val-input  { width: 72px; flex-shrink: 0; }
+.weight-date-input:focus,
+.weight-val-input:focus  { outline: none; border-color: var(--accent2); }
+
+.weight-log-btn {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  padding: 5px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.2s, color 0.2s;
+  flex-shrink: 0;
+}
+.weight-log-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+
+/* Recent entries */
+.weight-log {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.weight-log-pill {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  padding: 3px 10px;
+  color: var(--text3);
+}
+.weight-log-pill strong { color: var(--text); font-weight: 500; }
+
 /* ─── Score Ring Tiles ───────────────────────────────────────── */
 .score-ring-wrap {
   display: flex;

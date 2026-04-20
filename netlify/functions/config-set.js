@@ -1,5 +1,5 @@
 // netlify/functions/config-set.js
-const ALLOWED_KEYS = new Set(['startWeight','currentWeight','targetWeight','stepTarget','manualSteps','wakeTime','sleepTime','caffeineProfile','caffeineDoses']);
+const ALLOWED_KEYS = new Set(['startWeight','currentWeight','targetWeight','stepTarget','manualSteps','wakeTime','sleepTime','caffeineProfile','caffeineDoses','weightLogs']);
 
 function isValid(key, value) {
   if (value === null || value === undefined) return true;
@@ -14,6 +14,12 @@ function isValid(key, value) {
       return ['default','smoker','contraceptive','pregnant'].includes(value);
     case 'caffeineDoses':
       return Array.isArray(value) && value.length <= 50;
+    case 'weightLogs':
+      return Array.isArray(value) && value.length <= 365 &&
+        value.every(function(e) {
+          return e && typeof e.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(e.date) &&
+            typeof e.weight === 'number' && e.weight > 0 && e.weight < 500;
+        });
     default: return false;
   }
 }
