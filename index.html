@@ -37,7 +37,7 @@
       <button class="modal-close" id="modalClose">✕</button>
     </div>
     <div class="modal-body">
-      <p class="modal-note">Weight and step targets are stored server-side (Netlify Blobs) and sync across all your devices. WHOOP token lives only in Netlify env vars.</p>
+      <p class="modal-note">Weight targets are stored server-side (Netlify Blobs) and sync across all your devices. WHOOP token lives only in Netlify env vars.</p>
       <div class="form-group">
         <label>Starting Weight (kg)</label>
         <input type="number" id="startWeight" placeholder="e.g. 92" step="0.1"/>
@@ -49,10 +49,6 @@
       <div class="form-group">
         <label>Target Weight (kg)</label>
         <input type="number" id="targetWeight" placeholder="e.g. 78" step="0.1"/>
-      </div>
-      <div class="form-group">
-        <label>Daily Step Target</label>
-        <input type="number" id="stepTarget" placeholder="e.g. 10000"/>
       </div>
       <div class="form-group">
         <label>Wake Time</label>
@@ -153,43 +149,7 @@
     <p class="commentary" id="recoveryCommentary">Configure WHOOP token to load recovery data.</p>
   </div>
 
-  <!-- Tile 4: Step Tracker -->
-  <div class="tile tile-steps" id="tileSteps">
-    <div class="tile-header">
-      <span class="tile-label">Steps</span>
-      <span class="tile-badge" id="stepsBadge">Today</span>
-    </div>
-    <div class="step-ring-wrap">
-      <svg class="step-ring" viewBox="0 0 200 200">
-        <circle class="step-ring-bg" cx="100" cy="100" r="80"/>
-        <circle class="step-ring-fill" id="stepRingFill" cx="100" cy="100" r="80"
-          stroke-dasharray="502" stroke-dashoffset="502"/>
-        <text class="step-count" id="stepCount" x="100" y="95" text-anchor="middle">—</text>
-        <text class="step-label-inner" x="100" y="118" text-anchor="middle">steps</text>
-      </svg>
-    </div>
-    <div class="step-stats">
-      <div class="step-stat">
-        <span class="step-stat-label">Target</span>
-        <span class="step-stat-val" id="stepTargetDisplay">—</span>
-      </div>
-      <div class="step-stat">
-        <span class="step-stat-label">Remaining</span>
-        <span class="step-stat-val" id="stepRemaining">—</span>
-      </div>
-      <div class="step-stat">
-        <span class="step-stat-label">% Done</span>
-        <span class="step-stat-val" id="stepPct">—</span>
-      </div>
-    </div>
-    <div class="step-note">WHOOP doesn't track steps — log manually or sync from Apple Health. <button class="link-btn" id="manualStepsBtn">Enter count</button></div>
-    <div class="manual-steps-wrap" id="manualStepsWrap" style="display:none">
-      <input type="number" id="manualStepsInput" placeholder="Enter step count" />
-      <button class="btn-small" id="manualStepsSave">Set</button>
-    </div>
-  </div>
-
-  <!-- Tile 5: Caffeine Window -->
+  <!-- Tile 4: Caffeine Window -->
   <div class="tile tile-caffeine tile-wide" id="tileCaffeine">
 
     <!-- Header -->
@@ -297,7 +257,6 @@
 <script src="js/config.js"></script>
 <script src="js/whoop.js"></script>
 <script src="js/caffeine.js"></script>
-<script src="js/steps.js"></script>
 <script src="js/weight.js"></script>
 <script src="js/app.js"></script>
 </body>
