@@ -191,10 +191,36 @@
 
   <!-- Tile 5: Caffeine Window -->
   <div class="tile tile-caffeine tile-wide" id="tileCaffeine">
-    <div class="tile-header">
-      <span class="tile-label">Caffeine Window</span>
-      <span class="tile-badge" id="caffeineBadge">—mg active</span>
+
+    <!-- Header -->
+    <div class="caff-head">
+      <div>
+        <div class="caff-eyebrow">Sleep &amp; Stimulants</div>
+        <h2 class="caff-title">Adenosine Clearance</h2>
+      </div>
+      <div class="caff-phase-pill">
+        <span class="caff-phase-dot" id="caffPhaseDot"></span>
+        <span id="caffPhaseLabel">—</span>
+      </div>
     </div>
+
+    <!-- Readout row -->
+    <div class="caff-readout">
+      <div>
+        <div class="caff-rlabel">In system</div>
+        <div class="caff-rvalue"><span id="caffCurrent">—</span><span class="caff-runit"> mg</span></div>
+      </div>
+      <div>
+        <div class="caff-rlabel">Half-life</div>
+        <div class="caff-rvalue"><span id="caffHalfLife">—</span><span class="caff-runit"> h</span></div>
+      </div>
+      <div>
+        <div class="caff-rlabel">Clear by</div>
+        <div class="caff-rvalue" id="caffClearBy">—</div>
+      </div>
+    </div>
+
+    <!-- Log controls -->
     <div class="caffeine-controls">
       <button class="btn-log" id="logCoffee">+ Espresso (80mg)</button>
       <button class="btn-log" id="logCoffeeFilter">+ Filter (120mg)</button>
@@ -207,9 +233,45 @@
       </select>
       <button class="btn-clear" id="clearCaffeine">Clear all</button>
     </div>
+
+    <!-- Decay chart -->
     <div class="caffeine-chart-wrap">
       <canvas id="caffeineChart" aria-label="Caffeine decay curve showing active caffeine levels over time with sleep and wake markers"></canvas>
     </div>
+
+    <!-- Phase bar -->
+    <div class="caff-phases">
+      <div class="caff-bar" id="caffBar">
+        <div class="caff-now-mark" id="caffNowMark"></div>
+      </div>
+      <div class="caff-ticks">
+        <div class="caff-tick">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+          <span id="caffTickWake">—</span>
+        </div>
+        <div class="caff-tick"><span id="caffTickOnset">—</span></div>
+        <div class="caff-tick"><span id="caffTickPeak">—</span></div>
+        <div class="caff-tick"><span id="caffTickClear">—</span></div>
+        <div class="caff-tick">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <span id="caffTickBed">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="caff-legend">
+      <div class="caff-chip"><span class="caff-sq caff-amber"></span><div><strong>Onset</strong> · ramp-up</div></div>
+      <div class="caff-chip"><span class="caff-sq caff-teal"></span><div><strong>Peak</strong> · focus window</div></div>
+      <div class="caff-chip"><span class="caff-sq caff-coral"></span><div><strong>Clearance</strong> · wind down</div></div>
+    </div>
+
+    <!-- Footer note -->
+    <div class="caff-note">
+      Delay stimulants to let residual adenosine clear, and <b>heighten their effect</b> during your productivity peak. A last dose before <b id="caffCutoff">—</b> keeps you under the bedtime threshold.
+    </div>
+
+    <!-- Dose log -->
     <div class="caffeine-log" id="caffeineLog"></div>
   </div>
 
