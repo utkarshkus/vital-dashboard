@@ -1,5 +1,5 @@
 // netlify/functions/config-set.js
-const ALLOWED_KEYS = new Set(['startWeight','currentWeight','targetWeight','stepTarget','manualSteps','wakeTime','sleepTime','caffeineProfile','caffeineDoses','weightLogs']);
+const ALLOWED_KEYS = new Set(['startWeight','currentWeight','targetWeight','startDate','targetDate','stepTarget','manualSteps','wakeTime','sleepTime','caffeineProfile','caffeineDoses','weightLogs']);
 
 function isValid(key, value) {
   if (value === null || value === undefined) return true;
@@ -8,6 +8,8 @@ function isValid(key, value) {
       return typeof value === 'number' && value > 0 && value < 500;
     case 'stepTarget': case 'manualSteps':
       return typeof value === 'number' && value >= 0 && value <= 100000;
+    case 'startDate': case 'targetDate':
+      return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
     case 'wakeTime': case 'sleepTime':
       return typeof value === 'string' && /^\d{2}:\d{2}$/.test(value);
     case 'caffeineProfile':

@@ -60,8 +60,10 @@ function initConfig() {
 
     const result = await Config.saveAll({
       startWeight:   parseFloat(document.getElementById('startWeight').value)   || null,
+      startDate:     document.getElementById('startDate').value                 || null,
       currentWeight: parseFloat(document.getElementById('currentWeight').value) || null,
       targetWeight:  parseFloat(document.getElementById('targetWeight').value)  || null,
+      targetDate:    document.getElementById('targetDate').value                || null,
       wakeTime:      document.getElementById('wakeTime').value,
       sleepTime:     document.getElementById('sleepTime').value,
     });
@@ -83,8 +85,10 @@ function initConfig() {
 
 function populateModal() {
   document.getElementById('startWeight').value   = Config.get('startWeight')   || '';
+  document.getElementById('startDate').value     = Config.get('startDate')     || '';
   document.getElementById('currentWeight').value = Config.get('currentWeight') || '';
   document.getElementById('targetWeight').value  = Config.get('targetWeight')  || '';
+  document.getElementById('targetDate').value    = Config.get('targetDate')    || '';
   document.getElementById('wakeTime').value      = Config.get('wakeTime')      || '06:30';
   document.getElementById('sleepTime').value     = Config.get('sleepTime')     || '22:30';
 }
