@@ -76,8 +76,15 @@ const CaffeineTracker = {
   _bindButtons() {
     document.getElementById('logCoffee').addEventListener('click',       () => this.log(80,  'Espresso'));
     document.getElementById('logCoffeeFilter').addEventListener('click', () => this.log(120, 'Filter coffee'));
+    document.getElementById('logAmericano').addEventListener('click',    () => this.log(150, 'Americano'));
     document.getElementById('logTea').addEventListener('click',          () => this.log(40,  'Tea'));
     document.getElementById('clearCaffeine').addEventListener('click',   () => this.clear());
+
+    const timeInput = document.getElementById('caffeineIntakeTime');
+    if (timeInput) {
+      const now = new Date();
+      timeInput.value = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+    }
 
     // Profile selector — persisted server-side
     const sel = document.getElementById('caffeineProfile');
@@ -93,7 +100,14 @@ const CaffeineTracker = {
   },
 
   async log(mg, label) {
-    this._doses.push({ time: new Date(), mg, label });
+    const intakeInput = document.getElementById('caffeineIntakeTime');
+    let doseTime = new Date();
+    if (intakeInput && intakeInput.value) {
+      const [h, m] = intakeInput.value.split(':').map(Number);
+      doseTime = new Date();
+      doseTime.setHours(h, m, 0, 0);
+    }
+    this._doses.push({ time: doseTime, mg, label });
     await this._save();
     this.render();
   },
@@ -200,37 +214,29 @@ const CaffeineTracker = {
     const sleep = parseTime(sleepStr, now);
     if (sleep <= wake) sleep.setDate(sleep.getDate() + 1);
 
-    // Extend end 2h past sleep to show residual load at bedtime
-    const end  = new Date(sleep.getTime() + 2 * 3600000);
-    const step = 10 * 60000; // 10-minute resolution (finer than before)
+    // x-axis spans exactly wake → sleep; minutes from wake is the x unit
+    const sleepMinutes = (sleep - wake) / 60000;
+    const nowMinutes   = (now - wake) / 60000;
+    const step = 10 * 60000; // 10-minute resolution
 
     const caffPoints = [];
     const pxPoints   = [];
-    const totalPoints = [];
-    const labels     = [];
 
-    for (let ts = wake.getTime(); ts <= end.getTime(); ts += step) {
+    for (let ts = wake.getTime(); ts <= sleep.getTime(); ts += step) {
       const t = new Date(ts);
-      const caff  = Math.max(0, this._caffeineOnlyAt(t));
-      const px    = Math.max(0, this._paraxanthineOnlyAt(t));
-      const total = Math.max(0, caff + px);
-      caffPoints.push(parseFloat(caff.toFixed(1)));
-      pxPoints.push(parseFloat(px.toFixed(1)));
-      totalPoints.push(parseFloat(total.toFixed(1)));
-      labels.push(t.getMinutes() === 0
-        ? t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        : '');
+      const x    = (ts - wake.getTime()) / 60000;
+      const caff = Math.max(0, this._caffeineOnlyAt(t));
+      const px   = Math.max(0, this._paraxanthineOnlyAt(t));
+      caffPoints.push({ x, y: parseFloat(caff.toFixed(1)) });
+      pxPoints.push({ x, y: parseFloat(px.toFixed(1)) });
     }
 
-    return { caffPoints, pxPoints, totalPoints, labels, wake, sleep, now, step };
+    return { caffPoints, pxPoints, wake, sleep, now, step, sleepMinutes, nowMinutes };
   },
 
   // ─── Render ──────────────────────────────────────────────
   render() {
-    const { caffPoints, pxPoints, totalPoints, labels, wake, sleep, now, step } = this._buildCurve();
-
-    const nowIdx   = Math.max(0, Math.round((now   - wake) / step));
-    const sleepIdx = Math.max(0, Math.round((sleep - wake) / step));
+    const { caffPoints, pxPoints, wake, sleep, now, step, sleepMinutes, nowMinutes } = this._buildCurve();
 
     const isDark    = document.documentElement.getAttribute('data-theme') !== 'light';
     const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
@@ -369,11 +375,9 @@ const CaffeineTracker = {
     // ── Chart.js ─────────────────────────────────────────
 
     const annotations = [];
-    if (sleepIdx > 0 && sleepIdx < labels.length) {
-      annotations.push({ idx: sleepIdx, label: 'Sleep target', color: isDark ? '#68d9e0' : '#0e8090' });
-    }
-    if (nowIdx > 0 && nowIdx < labels.length) {
-      annotations.push({ idx: nowIdx, label: 'Now', color: isDark ? '#a0f0b0' : '#1a9e50' });
+    annotations.push({ xValue: sleepMinutes, label: 'Sleep target', color: isDark ? '#68d9e0' : '#0e8090' });
+    if (nowMinutes > 0 && nowMinutes < sleepMinutes) {
+      annotations.push({ xValue: nowMinutes, label: 'Now', color: isDark ? '#a0f0b0' : '#1a9e50' });
     }
 
     const ctx = document.getElementById('caffeineChart').getContext('2d');
@@ -384,7 +388,7 @@ const CaffeineTracker = {
       afterDraw(chart) {
         const { ctx, scales, chartArea } = chart;
         annotations.forEach(function(ann) {
-          const x = scales.x.getPixelForValue(ann.idx);
+          const x = scales.x.getPixelForValue(ann.xValue);
           if (x < chartArea.left || x > chartArea.right) return;
           ctx.save();
           ctx.beginPath();
@@ -397,7 +401,7 @@ const CaffeineTracker = {
           ctx.setLineDash([]);
           ctx.fillStyle = ann.color;
           ctx.font = '9px DM Mono, monospace';
-          ctx.textAlign = 'center';
+          ctx.textAlign = x >= chartArea.right - 30 ? 'right' : 'center';
           ctx.fillText(ann.label, x, chartArea.top + 11);
           ctx.restore();
         });
@@ -408,7 +412,6 @@ const CaffeineTracker = {
       type: 'line',
       plugins: [verticalLinePlugin],
       data: {
-        labels: labels,
         datasets: [
           {
             // Stacked area: paraxanthine (bottom layer)
@@ -438,6 +441,7 @@ const CaffeineTracker = {
         ]
       },
       options: {
+        parsing: false,
         responsive: true,
         maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
@@ -445,7 +449,11 @@ const CaffeineTracker = {
           legend: { display: false },
           tooltip: {
             callbacks: {
-              title: function(items) { return items[0].label || ''; },
+              title: function(items) {
+                const xVal = items[0].parsed.x;
+                const t = new Date(wake.getTime() + xVal * 60000);
+                return t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              },
               label: function(item) {
                 const name = item.datasetIndex === 0 ? 'Paraxanthine-eq' : 'Caffeine';
                 return name + ': ' + Math.round(item.parsed.y) + 'mg';
@@ -464,12 +472,18 @@ const CaffeineTracker = {
         },
         scales: {
           x: {
+            type: 'linear',
+            min: 0,
+            max: sleepMinutes,
             ticks: {
               color: textColor,
               font: { size: 9, family: 'DM Mono' },
               maxRotation: 0,
-              autoSkip: true,
               maxTicksLimit: 8,
+              callback: function(v) {
+                const t = new Date(wake.getTime() + v * 60000);
+                return t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              },
             },
             grid: { color: gridColor },
             border: { display: false },

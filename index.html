@@ -182,8 +182,13 @@
 
     <!-- Log controls -->
     <div class="caffeine-controls">
+      <div class="caff-intake-row">
+        <span class="caff-intake-label">Intake time</span>
+        <input type="time" id="caffeineIntakeTime" class="caff-time-input">
+      </div>
       <button class="btn-log" id="logCoffee">+ Espresso (80mg)</button>
       <button class="btn-log" id="logCoffeeFilter">+ Filter (120mg)</button>
+      <button class="btn-log" id="logAmericano">+ Americano (150mg)</button>
       <button class="btn-log" id="logTea">+ Tea (40mg)</button>
       <select class="caffeine-profile-sel" id="caffeineProfile" title="Metabolism profile affects caffeine half-life (NBK223808)">
         <option value="default">Average t½ 5h</option>
