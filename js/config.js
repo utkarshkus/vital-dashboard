@@ -1,7 +1,7 @@
 // config.js — all user data stored server-side via Netlify Blobs
 //
 // SERVER fields (via /api/config-get and /api/config-set):
-//   startWeight, currentWeight, targetWeight, stepTarget, manualSteps,
+//   startWeight, currentWeight, targetWeight,
 //   wakeTime, sleepTime, caffeineProfile, caffeineDoses
 //
 // localStorage is used ONLY as an offline cache — never as primary storage.
@@ -11,8 +11,6 @@ const SERVER_KEYS = new Set([
   'startWeight',
   'currentWeight',
   'targetWeight',
-  'stepTarget',
-  'manualSteps',
   'wakeTime',
   'sleepTime',
   'caffeineProfile',
@@ -23,8 +21,6 @@ const DEFAULTS = {
   startWeight:    null,
   currentWeight:  null,
   targetWeight:   null,
-  stepTarget:     10000,
-  manualSteps:    null,
   wakeTime:       '06:30',
   sleepTime:      '22:30',
   caffeineProfile:'default',

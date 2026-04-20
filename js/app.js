@@ -62,7 +62,6 @@ function initConfig() {
       startWeight:   parseFloat(document.getElementById('startWeight').value)   || null,
       currentWeight: parseFloat(document.getElementById('currentWeight').value) || null,
       targetWeight:  parseFloat(document.getElementById('targetWeight').value)  || null,
-      stepTarget:    parseInt(document.getElementById('stepTarget').value, 10)  || 10000,
       wakeTime:      document.getElementById('wakeTime').value,
       sleepTime:     document.getElementById('sleepTime').value,
     });
@@ -86,7 +85,6 @@ function populateModal() {
   document.getElementById('startWeight').value   = Config.get('startWeight')   || '';
   document.getElementById('currentWeight').value = Config.get('currentWeight') || '';
   document.getElementById('targetWeight').value  = Config.get('targetWeight')  || '';
-  document.getElementById('stepTarget').value    = Config.get('stepTarget')    || '';
   document.getElementById('wakeTime').value      = Config.get('wakeTime')      || '06:30';
   document.getElementById('sleepTime').value     = Config.get('sleepTime')     || '22:30';
 }
@@ -236,7 +234,6 @@ async function boot() {
 
   // Render local tiles now that config is populated
   WeightTracker.render();
-  StepTracker.render();
   CaffeineTracker.render();
 
   // Check WHOOP auth before attempting API calls
@@ -260,7 +257,6 @@ initConfig();
 
 document.addEventListener('DOMContentLoaded', function() {
   handleAuthRedirect();
-  StepTracker.init();
   CaffeineTracker.init();
   boot();
   setInterval(boot, 15 * 60 * 1000);
