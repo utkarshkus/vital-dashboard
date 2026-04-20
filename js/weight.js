@@ -8,12 +8,18 @@ const WeightTracker = {
     this.render();
   },
 
+  // Local YYYY-MM-DD string (avoids UTC-offset date shift from toISOString)
+  _todayStr() {
+    const n = new Date();
+    return n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0');
+  },
+
   _bindUI() {
     const btn     = document.getElementById('logWeightBtn');
     const inp     = document.getElementById('logWeightInput');
     const dateInp = document.getElementById('logWeightDate');
 
-    if (dateInp) dateInp.value = new Date().toISOString().slice(0, 10);
+    if (dateInp) dateInp.value = this._todayStr();
     if (btn) btn.addEventListener('click', () => this._logEntry());
     if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') this._logEntry(); });
   },
@@ -26,7 +32,7 @@ const WeightTracker = {
     const val = parseFloat(inp.value);
     if (isNaN(val) || val <= 0 || val > 500) return;
 
-    const today   = new Date().toISOString().slice(0, 10);
+    const today   = this._todayStr();
     const dateStr = (dateInp && dateInp.value) ? dateInp.value : today;
 
     const logs = (Config.get('weightLogs') || []).slice();
@@ -50,7 +56,7 @@ const WeightTracker = {
     if (latest) await Config.set('currentWeight', latest.weight);
 
     inp.value = '';
-    if (dateInp) dateInp.value = today;
+    if (dateInp) dateInp.value = this._todayStr();
 
     this.render();
   },
@@ -88,10 +94,13 @@ const WeightTracker = {
     const textColor = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)';
 
     // Date range: first log (or today) up to today, capped at 90 days back
-    const today       = new Date(); today.setHours(0, 0, 0, 0);
-    const ninetyAgo   = new Date(today.getTime() - 90 * 24 * 3600 * 1000);
-    const fromDate    = logs.length > 0
-      ? new Date(Math.max(new Date(logs[0].date).getTime(), ninetyAgo.getTime()))
+    const today     = new Date(); today.setHours(0, 0, 0, 0);  // local midnight
+    const ninetyAgo = new Date(today.getTime() - 90 * 24 * 3600 * 1000);
+    // Parse date strings as local midnight (not UTC) to avoid timezone shift
+    const parseLocal = str => { const [y, m, d] = str.split('-').map(Number); return new Date(y, m - 1, d); };
+    const localStr   = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const fromDate   = logs.length > 0
+      ? new Date(Math.max(parseLocal(logs[0].date).getTime(), ninetyAgo.getTime()))
       : today;
 
     // Build log map
@@ -103,7 +112,7 @@ const WeightTracker = {
     const targetLine  = [];
 
     for (let d = new Date(fromDate); d <= today; d.setDate(d.getDate() + 1)) {
-      const dateStr = d.toISOString().slice(0, 10);
+      const dateStr = localStr(d);        // local date string, not UTC
       labels.push(dateStr);
       actualData.push(logMap[dateStr] !== undefined ? logMap[dateStr] : null);
       targetLine.push(target);
