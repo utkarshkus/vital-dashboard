@@ -62,19 +62,21 @@ const WeightTracker = {
   },
 
   render() {
-    const start  = parseFloat(Config.get('startWeight'));
-    const target = parseFloat(Config.get('targetWeight'));
-    const logs   = (Config.get('weightLogs') || []).slice()
-                   .sort((a, b) => a.date.localeCompare(b.date));
+    const start         = parseFloat(Config.get('startWeight'));
+    const target        = parseFloat(Config.get('targetWeight'));
+    const startDateStr  = Config.get('startDate');
+    const targetDateStr = Config.get('targetDate');
+    const logs          = (Config.get('weightLogs') || []).slice()
+                          .sort((a, b) => a.date.localeCompare(b.date));
 
     const lastLog = logs.length > 0 ? logs[logs.length - 1] : null;
     const curr    = lastLog ? lastLog.weight
                             : parseFloat(Config.get('currentWeight'));
 
     if (isNaN(start) || isNaN(target)) {
-      document.getElementById('wStart').textContent   = '—';
-      document.getElementById('wNow').textContent     = '—';
-      document.getElementById('wTarget').textContent  = '—';
+      document.getElementById('wStart').textContent      = '—';
+      document.getElementById('wNow').textContent        = '—';
+      document.getElementById('wTarget').textContent     = '—';
       document.getElementById('weightBadge').textContent = 'Setup needed';
       if (this._chart) { this._chart.destroy(); this._chart = null; }
       this._renderLog([]);
@@ -93,41 +95,75 @@ const WeightTracker = {
     const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
     const textColor = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)';
 
-    // Date range: first log (or today) up to today, capped at 90 days back
-    const today     = new Date(); today.setHours(0, 0, 0, 0);  // local midnight
-    const ninetyAgo = new Date(today.getTime() - 90 * 24 * 3600 * 1000);
-    // Parse date strings as local midnight (not UTC) to avoid timezone shift
+    const today      = new Date(); today.setHours(0, 0, 0, 0);
     const parseLocal = str => { const [y, m, d] = str.split('-').map(Number); return new Date(y, m - 1, d); };
     const localStr   = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    const fromDate   = logs.length > 0
-      ? new Date(Math.max(parseLocal(logs[0].date).getTime(), ninetyAgo.getTime()))
-      : today;
 
-    // Build log map
+    // Full journey range when dates are set; fall back to 90-day rolling window
+    let fromDate, toDate;
+    if (startDateStr && targetDateStr) {
+      fromDate = parseLocal(startDateStr);
+      toDate   = parseLocal(targetDateStr);
+    } else {
+      const ninetyAgo = new Date(today.getTime() - 90 * 24 * 3600 * 1000);
+      fromDate = logs.length > 0
+        ? new Date(Math.max(parseLocal(logs[0].date).getTime(), ninetyAgo.getTime()))
+        : today;
+      toDate = today;
+    }
+
     const logMap = {};
     logs.forEach(l => { logMap[l.date] = l.weight; });
 
     const labels      = [];
     const actualData  = [];
-    const targetLine  = [];
+    const trajectory  = [];
+    const totalMs     = toDate.getTime() - fromDate.getTime();
 
-    for (let d = new Date(fromDate); d <= today; d.setDate(d.getDate() + 1)) {
-      const dateStr = localStr(d);        // local date string, not UTC
+    for (let d = new Date(fromDate); d <= toDate; d.setDate(d.getDate() + 1)) {
+      const dateStr = localStr(d);
       labels.push(dateStr);
       actualData.push(logMap[dateStr] !== undefined ? logMap[dateStr] : null);
-      targetLine.push(target);
+
+      // Linear trajectory: startWeight → targetWeight over the full date range
+      const progress = totalMs > 0 ? (d.getTime() - fromDate.getTime()) / totalMs : 0;
+      trajectory.push(parseFloat((start + (target - start) * Math.min(progress, 1)).toFixed(2)));
     }
 
-    // Y-axis bounds from all logged + boundary weights
-    const allW   = logs.map(l => l.weight).concat([start, target]).filter(w => !isNaN(w));
-    const minY   = allW.length > 0 ? Math.floor(Math.min(...allW) - 1) : target - 2;
-    const maxY   = allW.length > 0 ? Math.ceil(Math.max(...allW) + 1)  : start + 2;
+    const allW = logs.map(l => l.weight).concat([start, target]).filter(w => !isNaN(w));
+    const minY = allW.length > 0 ? Math.floor(Math.min(...allW) - 2) : target - 2;
+    const maxY = allW.length > 0 ? Math.ceil(Math.max(...allW) + 2)  : start + 2;
+
+    const todayStr = localStr(today);
+
+    // Inline plugin: draws a vertical "Today" marker on the chart
+    const todayLinePlugin = {
+      id: 'todayLine',
+      afterDraw(chart) {
+        const idx = labels.indexOf(todayStr);
+        if (idx < 0) return;
+        const meta = chart.getDatasetMeta(0);
+        if (!meta.data[idx]) return;
+        const x = meta.data[idx].x;
+        const { ctx: c, chartArea: { top, bottom } } = chart;
+        c.save();
+        c.beginPath();
+        c.moveTo(x, top);
+        c.lineTo(x, bottom);
+        c.strokeStyle = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.18)';
+        c.lineWidth = 1.5;
+        c.setLineDash([4, 4]);
+        c.stroke();
+        c.restore();
+      }
+    };
 
     const ctx = document.getElementById('weightChart').getContext('2d');
     if (this._chart) { this._chart.destroy(); this._chart = null; }
 
     this._chart = new Chart(ctx, {
       type: 'line',
+      plugins: [todayLinePlugin],
       data: {
         labels,
         datasets: [
@@ -146,9 +182,9 @@ const WeightTracker = {
             fill: false,
           },
           {
-            label: 'Target',
-            data: targetLine,
-            borderColor: isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.15)',
+            label: 'Target Trajectory',
+            data: trajectory,
+            borderColor: isDark ? 'rgba(255,210,80,0.45)' : 'rgba(180,100,0,0.35)',
             backgroundColor: 'transparent',
             borderWidth: 1.5,
             pointRadius: 0,
@@ -166,8 +202,9 @@ const WeightTracker = {
             filter: item => item.parsed.y !== null && item.datasetIndex === 0,
             callbacks: {
               title: items => {
-                const d = new Date(items[0].label);
-                return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+                const lbl = items[0].label;
+                const [y, m, d] = lbl.split('-').map(Number);
+                return new Date(y, m - 1, d).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
               },
               label: ctx => ctx.parsed.y.toFixed(1) + ' kg',
             }
@@ -178,12 +215,12 @@ const WeightTracker = {
             ticks: {
               color: textColor,
               font: { size: 9, family: 'DM Mono' },
-              maxTicksLimit: 6,
+              maxTicksLimit: 7,
               maxRotation: 0,
               callback: function(val) {
-                const label = this.getLabelForValue(val);
-                const d = new Date(label);
-                return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+                const lbl = this.getLabelForValue(val);
+                const [y, m, d] = lbl.split('-').map(Number);
+                return new Date(y, m - 1, d).toLocaleDateString([], { month: 'short', day: 'numeric' });
               }
             },
             grid: { color: gridColor },

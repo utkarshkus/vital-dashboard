@@ -11,6 +11,8 @@ const SERVER_KEYS = new Set([
   'startWeight',
   'currentWeight',
   'targetWeight',
+  'startDate',       // YYYY-MM-DD — journey start date
+  'targetDate',      // YYYY-MM-DD — goal target date
   'wakeTime',
   'sleepTime',
   'caffeineProfile',
@@ -22,6 +24,8 @@ const DEFAULTS = {
   startWeight:    null,
   currentWeight:  null,
   targetWeight:   null,
+  startDate:      null,
+  targetDate:     null,
   wakeTime:       '06:30',
   sleepTime:      '22:30',
   caffeineProfile:'default',
