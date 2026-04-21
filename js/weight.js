@@ -254,7 +254,8 @@ const WeightTracker = {
     recent.forEach(function(entry) {
       const pill = document.createElement('div');
       pill.className = 'weight-log-pill';
-      const d = new Date(entry.date);
+      const [ey, em, ed] = entry.date.split('-').map(Number);
+      const d = new Date(ey, em - 1, ed);
       const label = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
       pill.innerHTML = label + ' <strong>' + entry.weight + ' kg</strong>';
       container.appendChild(pill);
