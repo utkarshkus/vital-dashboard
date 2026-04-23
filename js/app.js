@@ -116,10 +116,23 @@ async function loadSleep() {
     }
 
     document.getElementById('sleepCommentary').textContent = sleepLabel(s.score);
-    const offset = 314 * (1 - s.score / 100);
-    document.getElementById('sleepRingFill').style.strokeDashoffset = offset.toFixed(1);
     const scoreColor = s.score >= 85 ? '#a0f0b0' : s.score >= 60 ? '#f0c070' : '#f07070';
-    document.getElementById('sleepRingFill').style.stroke = scoreColor;
+    document.getElementById('bedFillLayer').setAttribute('fill', scoreColor);
+
+    const bedTop = 8, bedBottom = 74;
+    const targetFillH = (bedBottom - bedTop) * (s.score / 100);
+    const targetClipY = bedBottom - targetFillH;
+    const clipRect = document.getElementById('bedClipRect');
+    const startTime = performance.now();
+    (function animateBedFill(ts) {
+      const t = Math.min((ts - startTime) / 1000, 1);
+      const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
+      const fillH = targetFillH * ease;
+      const clipY = bedBottom - fillH;
+      clipRect.setAttribute('y', clipY.toFixed(1));
+      clipRect.setAttribute('height', (120 - clipY).toFixed(1));
+      if (t < 1) requestAnimationFrame(animateBedFill);
+    })(startTime);
 
     // Feed actual wake time into caffeine window (overrides manual config)
     if (s.wakeHHMM && !s.nap) {

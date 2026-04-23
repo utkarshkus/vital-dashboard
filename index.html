@@ -122,11 +122,29 @@
     </div>
     <div class="score-ring-wrap">
       <svg class="score-ring" viewBox="0 0 120 120">
-        <circle class="ring-bg" cx="60" cy="60" r="50" />
-        <circle class="ring-fill ring-sleep" id="sleepRingFill" cx="60" cy="60" r="50"
-          stroke-dasharray="314" stroke-dashoffset="314" />
-        <text class="ring-score" id="sleepScoreText" x="60" y="58" text-anchor="middle">—</text>
-        <text class="ring-sub" x="60" y="74" text-anchor="middle">/ 100</text>
+        <defs>
+          <clipPath id="bedFillClip">
+            <rect id="bedClipRect" x="0" y="74" width="120" height="0" />
+          </clipPath>
+        </defs>
+        <!-- Unfilled bed (background) -->
+        <g class="bed-bg">
+          <rect x="8"  y="8"  width="12" height="60" rx="3"/>
+          <rect x="8"  y="62" width="104" height="12" rx="3"/>
+          <rect x="20" y="38" width="92" height="28" rx="4"/>
+          <rect x="26" y="22" width="30" height="20" rx="6"/>
+          <rect x="62" y="22" width="30" height="20" rx="6"/>
+        </g>
+        <!-- Filled bed (clipped to score %) -->
+        <g class="bed-fill" id="bedFillLayer" clip-path="url(#bedFillClip)">
+          <rect x="8"  y="8"  width="12" height="60" rx="3"/>
+          <rect x="8"  y="62" width="104" height="12" rx="3"/>
+          <rect x="20" y="38" width="92" height="28" rx="4"/>
+          <rect x="26" y="22" width="30" height="20" rx="6"/>
+          <rect x="62" y="22" width="30" height="20" rx="6"/>
+        </g>
+        <text class="ring-score" id="sleepScoreText" x="60" y="95" text-anchor="middle">—</text>
+        <text class="ring-sub" x="60" y="109" text-anchor="middle">/ 100</text>
       </svg>
     </div>
     <div class="score-meta">

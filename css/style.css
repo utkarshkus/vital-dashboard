@@ -335,6 +335,9 @@ body {
 
 .ring-sleep { stroke: var(--sleep-color); }
 
+.bed-bg   { fill: var(--surface2); }
+.bed-fill { fill: var(--sleep-color); }
+
 .ring-score {
   font-family: var(--font-head);
   font-size: 22px;
