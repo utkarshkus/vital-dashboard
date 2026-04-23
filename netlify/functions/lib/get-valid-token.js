@@ -32,20 +32,26 @@ async function getValidToken(event) {
     const errText = await res.text();
     console.error('Token refresh failed:', errText);
 
-    // A concurrent invocation may have already refreshed (WHOOP rotates refresh
-    // tokens, so only the first of N simultaneous attempts wins). Re-read the
-    // store — if another invocation stored a fresh token, use it.
-    const latest = await store.get('tokens').catch(() => null);
-    if (latest) {
-      const latestTokens = JSON.parse(latest);
-      if (Date.now() < latestTokens.expiresAt) return latestTokens.accessToken;
-    }
-
-    // Definitive auth rejection — clear tokens so the user can re-authenticate.
-    // Don't delete on transient errors (5xx, network) so a later request can retry.
-    if (res.status === 400 || res.status === 401) {
+    if (res.status === 400) {
+      // WHOOP rotates refresh tokens, so only the first of N concurrent refresh
+      // attempts wins (the others get 400). Poll the store to give the winner
+      // time to persist its new tokens before concluding auth is broken.
+      for (let i = 0; i < 3; i++) {
+        await new Promise(r => setTimeout(r, 300));
+        const latest = await store.get('tokens').catch(() => null);
+        if (latest) {
+          const latestTokens = JSON.parse(latest);
+          if (Date.now() < latestTokens.expiresAt) return latestTokens.accessToken;
+        }
+      }
+      // Retries exhausted — the refresh token is genuinely invalid.
+      await store.delete('tokens').catch(() => {});
+    } else if (res.status === 401) {
+      // Definitive auth rejection — clear tokens immediately.
       await store.delete('tokens').catch(() => {});
     }
+    // 5xx / network errors: don't delete so a later request can retry.
+
     throw new Error('REFRESH_FAILED');
   }
 
