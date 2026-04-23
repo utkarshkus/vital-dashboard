@@ -67,7 +67,6 @@ const Whoop = {
       hrv: Math.round(s.hrv_rmssd_milli || 0),
       rhr: Math.round(s.resting_heart_rate || 0),
       spo2: ((s.spo2_percentage || 0)).toFixed(1),
-      skinTemp: parseFloat((s.skin_temp_celsius || 0).toFixed(2)),
       raw: record,
     };
   },
@@ -97,9 +96,11 @@ const Whoop = {
       `/recovery?limit=${days}&start=${encodeURIComponent(fmt(start))}&end=${encodeURIComponent(fmt(end))}`
     );
     const records = (data.records || []).reverse();
-    return records.map(r => ({
+    const temps = records.map(r => r.score?.skin_temp_celsius || 0);
+    const mean = temps.length ? temps.reduce((a, b) => a + b, 0) / temps.length : 0;
+    return records.map((r, i) => ({
       date: r.created_at?.split('T')[0] || '—',
-      temp: parseFloat((r.score?.skin_temp_celsius || 0).toFixed(2)),
+      temp: parseFloat((temps[i] - mean).toFixed(2)),
     }));
   },
 };
