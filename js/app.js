@@ -147,12 +147,6 @@ async function loadRecovery() {
     const offset = 314 * (1 - r.score / 100);
     document.getElementById('recoveryRingFill').style.strokeDashoffset = offset.toFixed(1);
     document.getElementById('recoveryRingFill').style.stroke = color;
-    if (r.skinTemp) {
-      document.getElementById('tempDelta').textContent =
-        (r.skinTemp >= 0 ? '+' : '') + r.skinTemp.toFixed(2);
-      document.getElementById('tempDelta').style.color =
-        Math.abs(r.skinTemp) > 0.5 ? '#f07070' : '#a0f0b0';
-    }
   } catch (e) {
     console.warn('Recovery load error:', e.message);
     if (e.message === 'NOT_AUTHENTICATED') { handleWhoopAuthError(); return; }
@@ -172,6 +166,11 @@ async function loadTempTrend() {
     if (data.length > 0) {
       document.getElementById('tempCommentary').textContent =
         '14-day skin temperature deviation. Normal range ±0.5°C.';
+      const latest = data[data.length - 1].temp;
+      document.getElementById('tempDelta').textContent =
+        (latest >= 0 ? '+' : '') + latest.toFixed(2);
+      document.getElementById('tempDelta').style.color =
+        Math.abs(latest) > 0.5 ? '#f07070' : '#a0f0b0';
     }
   } catch (e) {
     console.warn('Temp trend error:', e.message);
