@@ -3,15 +3,23 @@
   var loginForm  = document.getElementById('loginForm');
   var setupForm  = document.getElementById('setupForm');
 
-  // Check if first-time setup is needed
+  function showLogin() {
+    loginForm.style.display = '';
+    setupForm.style.display = 'none';
+  }
+  function showSetup() {
+    loginForm.style.display = 'none';
+    setupForm.style.display = '';
+  }
+
+  // Toggle links
+  document.getElementById('showSetup').addEventListener('click', function (e) { e.preventDefault(); showSetup(); });
+  document.getElementById('showLogin').addEventListener('click', function (e) { e.preventDefault(); showLogin(); });
+
+  // Check if first-time setup is needed and default to the right form
   fetch('/api/setup')
     .then(function (r) { return r.json(); })
-    .then(function (data) {
-      if (data.needsSetup) {
-        loginForm.style.display = 'none';
-        setupForm.style.display = '';
-      }
-    })
+    .then(function (data) { if (data.needsSetup) showSetup(); })
     .catch(function () {});
 
   function showError(elId, msg) {

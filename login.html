@@ -102,6 +102,17 @@
   display: none;
 }
 .login-error.visible { display: block; }
+.login-switch {
+  margin-top: 1rem;
+  font-size: 0.75rem;
+  color: var(--text3);
+  text-align: center;
+}
+.login-switch a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.login-switch a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -125,9 +136,10 @@
       </div>
       <button class="login-btn" id="loginBtn">Sign in</button>
       <div class="login-error" id="loginError"></div>
+      <p class="login-switch">No account yet? <a href="#" id="showSetup">Create one</a></p>
     </div>
 
-    <!-- First-time setup form (shown when no users exist) -->
+    <!-- First-time setup form (shown when no users exist, or via toggle) -->
     <div id="setupForm" style="display:none">
       <div class="login-title">Create your account</div>
       <div class="login-hint">First-time setup — create the admin account to get started.</div>
@@ -145,6 +157,7 @@
       </div>
       <button class="login-btn" id="setupBtn">Create account</button>
       <div class="login-error" id="setupError"></div>
+      <p class="login-switch">Already have an account? <a href="#" id="showLogin">Sign in</a></p>
     </div>
 
   </div>
