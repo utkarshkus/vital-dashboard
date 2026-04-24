@@ -1,10 +1,15 @@
-// netlify/functions/auth-start.js
-// Generates OAuth state, stores in Blobs, redirects to WHOOP auth page.
-// Reached via /api/auth-start → /.netlify/functions/auth-start (netlify.toml)
-
+// Generates OAuth state keyed to the current user, stores in Blobs, redirects to WHOOP auth page.
 const crypto = require('crypto');
+const { requireSession } = require('./lib/session');
 
 exports.handler = async (event, context) => {
+  let session;
+  try {
+    session = await requireSession(event);
+  } catch (err) {
+    return { statusCode: 302, headers: { Location: '/login.html' }, body: '' };
+  }
+
   const clientId    = process.env.WHOOP_CLIENT_ID;
   const redirectUri = process.env.WHOOP_REDIRECT_URI;
 
@@ -22,13 +27,13 @@ exports.handler = async (event, context) => {
     const { getStore, connectLambda } = require('@netlify/blobs');
     connectLambda(event);
     const store = getStore('vital-auth');
-    await store.set('oauth-state', state, { ttl: 600 });
+    await store.set(`oauth-state-${state}`, JSON.stringify({ userId: session.userId }), { ttl: 600 });
   } catch (err) {
     console.error('Blobs set failed:', err.message);
     return {
       statusCode: 500,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Could not initialise auth session.', detail: err.message }),
+      body: JSON.stringify({ error: 'Could not initialise auth session.' }),
     };
   }
 

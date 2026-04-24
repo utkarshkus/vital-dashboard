@@ -270,6 +270,10 @@ document.addEventListener('DOMContentLoaded', function() {
 async function checkAuthStatus() {
   try {
     const res = await fetch('/api/auth-status');
+    if (res.status === 401) {
+      const data = await res.json().catch(() => ({}));
+      if (data.error === 'NO_SESSION') { window.location.replace('/login.html'); return false; }
+    }
     const data = await res.json();
 
     const banner = document.getElementById('authBanner');

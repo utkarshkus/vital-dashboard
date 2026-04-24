@@ -41,6 +41,11 @@ const Config = {
   async _loadServer() {
     try {
       const res = await fetch('/api/config-get');
+      if (res.status === 401) {
+        const d = await res.json().catch(() => ({}));
+        if (d.error === 'NO_SESSION') { window.location.replace('/login.html'); return; }
+        throw new Error('HTTP 401');
+      }
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
       for (const [k, v] of Object.entries(data)) {
@@ -90,6 +95,10 @@ const Config = {
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify(payload),
       });
+      if (res.status === 401) {
+        const d = await res.json().catch(() => ({}));
+        if (d.error === 'NO_SESSION') { window.location.replace('/login.html'); return { ok: false }; }
+      }
       if (!res.ok) throw new Error('HTTP ' + res.status);
       // Keep cache fresh
       localStorage.setItem('vital_server_cache', JSON.stringify(this._data));
