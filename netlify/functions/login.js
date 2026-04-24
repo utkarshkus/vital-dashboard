@@ -1,12 +1,23 @@
 // POST /api/login — validates credentials, issues session cookie.
 const { getUsers, verifyPassword } = require('./lib/users');
 const { createSession, sessionCookie } = require('./lib/session');
+const { rateLimit } = require('./lib/ratelimit');
 
 const HDR = { 'Content-Type': 'application/json' };
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, headers: HDR, body: JSON.stringify({ error: 'Method not allowed' }) };
+  }
+
+  // Rate limit: max 10 attempts per IP per 15 minutes
+  const limiter = await rateLimit(event, 'login');
+  if (limiter.limited) {
+    return {
+      statusCode: 429,
+      headers: { ...HDR, 'Retry-After': String(limiter.retryAfter) },
+      body: JSON.stringify({ error: 'Too many login attempts. Try again later.' }),
+    };
   }
 
   let body;
@@ -26,15 +37,18 @@ exports.handler = async (event) => {
     if (!user) {
       // Always hash to prevent user-enumeration via timing differences
       await verifyPassword('_', 'a'.repeat(64), 'b'.repeat(32)).catch(() => {});
+      await limiter.increment();
       return { statusCode: 401, headers: HDR, body: JSON.stringify({ error: 'Invalid credentials' }) };
     }
 
     const valid = await verifyPassword(password, user.passwordHash, user.salt);
     if (!valid) {
+      await limiter.increment();
       return { statusCode: 401, headers: HDR, body: JSON.stringify({ error: 'Invalid credentials' }) };
     }
 
-    const token = await createSession(event, user.userId);
+    await limiter.reset(); // clear failed-attempt counter on success
+    const token = await createSession(event, user.userId, user.tokenVersion || 0);
     return {
       statusCode: 200,
       headers: { ...HDR, 'Set-Cookie': sessionCookie(token) },

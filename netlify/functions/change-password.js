@@ -1,7 +1,9 @@
 // POST /api/change-password — lets the current user update their own password.
 // Body: { currentPassword, newPassword }
+// On success, increments tokenVersion to invalidate all other active sessions.
 const { requireSession } = require('./lib/session');
 const { getUsers, saveUsers, hashPassword, verifyPassword } = require('./lib/users');
+const { rateLimit } = require('./lib/ratelimit');
 
 const HDR = { 'Content-Type': 'application/json' };
 
@@ -15,6 +17,16 @@ exports.handler = async (event) => {
     session = await requireSession(event);
   } catch {
     return { statusCode: 401, headers: HDR, body: JSON.stringify({ error: 'NO_SESSION' }) };
+  }
+
+  // Rate limit per user ID (not IP, so VPN rotation doesn't help)
+  const limiter = await rateLimit(event, `chpw:${session.userId}`);
+  if (limiter.limited) {
+    return {
+      statusCode: 429,
+      headers: { ...HDR, 'Retry-After': String(limiter.retryAfter) },
+      body: JSON.stringify({ error: 'Too many attempts. Try again later.' }),
+    };
   }
 
   let body;
@@ -39,11 +51,14 @@ exports.handler = async (event) => {
 
     const valid = await verifyPassword(currentPassword, user.passwordHash, user.salt);
     if (!valid) {
+      await limiter.increment();
       return { statusCode: 401, headers: HDR, body: JSON.stringify({ error: 'Current password is incorrect' }) };
     }
 
+    await limiter.reset();
     const { hash, salt } = await hashPassword(newPassword);
-    users[username] = { ...user, passwordHash: hash, salt };
+    // Incrementing tokenVersion invalidates all existing sessions for this user.
+    users[username] = { ...user, passwordHash: hash, salt, tokenVersion: (user.tokenVersion || 0) + 1 };
     await saveUsers(event, users);
     return { statusCode: 200, headers: HDR, body: JSON.stringify({ ok: true }) };
   } catch (err) {
