@@ -49,7 +49,7 @@ exports.handler = async (event) => {
     const userId = crypto.randomBytes(8).toString('hex');
     const { hash, salt } = await hashPassword(password);
     await saveUsers(event, {
-      [username.toLowerCase()]: { userId, passwordHash: hash, salt, displayName: username },
+      [username.toLowerCase()]: { userId, passwordHash: hash, salt, displayName: username, isAdmin: true },
     });
 
     const token = await createSession(event, userId);

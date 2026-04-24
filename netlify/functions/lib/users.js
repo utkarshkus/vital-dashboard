@@ -34,4 +34,15 @@ async function saveUsers(event, users) {
   await store.set('users', JSON.stringify(users));
 }
 
-module.exports = { hashPassword, verifyPassword, getUsers, saveUsers };
+// Looks up the session user and throws 403 if they are not an admin.
+async function requireAdmin(event, session) {
+  const users = await getUsers(event);
+  const user = Object.values(users).find(u => u.userId === session.userId);
+  if (!user || !user.isAdmin) {
+    const err = new Error('NOT_ADMIN');
+    err.statusCode = 403;
+    throw err;
+  }
+}
+
+module.exports = { hashPassword, verifyPassword, getUsers, saveUsers, requireAdmin };
