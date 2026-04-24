@@ -253,6 +253,157 @@ async function boot() {
   }
 }
 
+// ─── User info + admin panel ───────────────────────────────────
+async function initUserPanel() {
+  let me;
+  try {
+    const res = await fetch('/api/me');
+    if (res.status === 401) { window.location.replace('/login.html'); return; }
+    me = await res.json();
+  } catch (e) {
+    console.warn('Could not load user info:', e.message);
+    return;
+  }
+
+  if (!me.isAdmin) return;
+
+  const usersBtn   = document.getElementById('usersBtn');
+  const usersModal = document.getElementById('usersModal');
+  usersBtn.style.display = '';
+
+  usersBtn.addEventListener('click', function() {
+    loadUsersList();
+    usersModal.classList.add('open');
+  });
+  document.getElementById('usersModalClose').addEventListener('click', function() {
+    usersModal.classList.remove('open');
+  });
+  usersModal.addEventListener('click', function(e) {
+    if (e.target === usersModal) usersModal.classList.remove('open');
+  });
+
+  document.getElementById('addUserBtn').addEventListener('click', async function() {
+    const btn       = this;
+    const statusEl  = document.getElementById('addUserStatus');
+    const username  = document.getElementById('newUsername').value.trim();
+    const password  = document.getElementById('newPassword').value;
+    const isAdmin   = document.getElementById('newIsAdmin').checked;
+
+    statusEl.textContent = '';
+    statusEl.className = 'config-save-status';
+
+    if (!username || !password) {
+      statusEl.textContent = 'Username and password required.';
+      statusEl.className = 'config-save-status status-warn';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Adding…';
+
+    try {
+      const res = await fetch('/api/admin-users', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ username, password, isAdmin }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        statusEl.textContent = 'User "' + username + '" created.';
+        statusEl.className = 'config-save-status status-ok';
+        document.getElementById('newUsername').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('newIsAdmin').checked = false;
+        loadUsersList();
+      } else {
+        statusEl.textContent = data.error || 'Failed to create user.';
+        statusEl.className = 'config-save-status status-warn';
+      }
+    } catch (e) {
+      statusEl.textContent = 'Network error.';
+      statusEl.className = 'config-save-status status-warn';
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Add user';
+  });
+}
+
+async function loadUsersList() {
+  const listEl = document.getElementById('usersList');
+  listEl.textContent = 'Loading…';
+  try {
+    const res  = await fetch('/api/admin-users');
+    const data = await res.json();
+    if (!res.ok) { listEl.textContent = 'Error: ' + (data.error || res.status); return; }
+
+    if (!data.users.length) { listEl.textContent = 'No users found.'; return; }
+
+    listEl.innerHTML = '';
+    data.users.forEach(function(u) {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border)';
+
+      const info = document.createElement('div');
+      info.style.cssText = 'display:flex;align-items:center;gap:.5rem;font-size:.85rem';
+      info.innerHTML = '<span style="color:var(--text)">' + escHtml(u.displayName || u.username) + '</span>'
+        + '<span style="font-size:.7rem;color:var(--text3)">@' + escHtml(u.username) + '</span>'
+        + (u.isAdmin ? '<span style="font-size:.65rem;background:var(--accent);color:var(--bg);border-radius:4px;padding:1px 5px">admin</span>' : '')
+        + (u.isSelf  ? '<span style="font-size:.65rem;color:var(--text3)">(you)</span>' : '');
+
+      const actions = document.createElement('div');
+      actions.style.cssText = 'display:flex;gap:.4rem';
+
+      if (!u.isSelf) {
+        const adminBtn = document.createElement('button');
+        adminBtn.className = 'btn-config';
+        adminBtn.style.cssText = 'font-size:.7rem;padding:.25rem .5rem';
+        adminBtn.textContent = u.isAdmin ? 'Revoke admin' : 'Make admin';
+        adminBtn.addEventListener('click', async function() {
+          adminBtn.disabled = true;
+          const res = await fetch('/api/admin-users', {
+            method:  'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ username: u.username, isAdmin: !u.isAdmin }),
+          });
+          if (res.ok) loadUsersList();
+          else adminBtn.disabled = false;
+        });
+        actions.appendChild(adminBtn);
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn-config';
+        delBtn.style.cssText = 'font-size:.7rem;padding:.25rem .5rem;color:var(--danger);border-color:var(--danger)';
+        delBtn.textContent = 'Delete';
+        delBtn.addEventListener('click', async function() {
+          if (!confirm('Delete user "' + u.username + '"? This cannot be undone.')) return;
+          delBtn.disabled = true;
+          const res = await fetch('/api/admin-users', {
+            method:  'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ username: u.username }),
+          });
+          if (res.ok) loadUsersList();
+          else delBtn.disabled = false;
+        });
+        actions.appendChild(delBtn);
+      }
+
+      row.appendChild(info);
+      row.appendChild(actions);
+      listEl.appendChild(row);
+    });
+  } catch (e) {
+    listEl.textContent = 'Could not load users: ' + e.message;
+  }
+}
+
+function escHtml(s) {
+  return String(s).replace(/[&<>"']/g, function(c) {
+    return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+  });
+}
+
 // ─── Init ──────────────────────────────────────────────────────
 initTheme();
 initDate();
@@ -262,6 +413,7 @@ document.addEventListener('DOMContentLoaded', function() {
   handleAuthRedirect();
   WeightTracker.init();
   CaffeineTracker.init();
+  initUserPanel();
   boot();
   setInterval(boot, 15 * 60 * 1000);
 });
@@ -270,6 +422,10 @@ document.addEventListener('DOMContentLoaded', function() {
 async function checkAuthStatus() {
   try {
     const res = await fetch('/api/auth-status');
+    if (res.status === 401) {
+      const data = await res.json().catch(() => ({}));
+      if (data.error === 'NO_SESSION') { window.location.replace('/login.html'); return false; }
+    }
     const data = await res.json();
 
     const banner = document.getElementById('authBanner');

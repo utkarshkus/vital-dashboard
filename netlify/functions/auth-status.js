@@ -1,22 +1,21 @@
-// netlify/functions/auth-status.js
-// Returns WHOOP connection status — connected, expired, canRefresh.
+// Returns WHOOP connection status for the authenticated user.
+const { requireSession } = require('./lib/session');
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-};
+const HDR = { 'Content-Type': 'application/json' };
 
 exports.handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: CORS, body: '' };
+  let session;
+  try {
+    session = await requireSession(event);
+  } catch (err) {
+    return { statusCode: 401, headers: HDR, body: JSON.stringify({ error: 'NO_SESSION' }) };
   }
 
   try {
     const { getStore, connectLambda } = require('@netlify/blobs');
     connectLambda(event);
     const store = getStore('vital-auth');
-    const raw   = await store.get('tokens').catch(() => null);
+    const raw   = await store.get(`tokens-${session.userId}`).catch(() => null);
 
     if (!raw) return json({ connected: false });
 
@@ -25,10 +24,10 @@ exports.handler = async (event) => {
     return json({ connected: true, expired, canRefresh: !!tokens.refreshToken });
 
   } catch (err) {
-    return json({ connected: false, error: err.message });
+    return json({ connected: false });
   }
 
   function json(data) {
-    return { statusCode: 200, headers: { ...CORS, 'Content-Type': 'application/json' }, body: JSON.stringify(data) };
+    return { statusCode: 200, headers: HDR, body: JSON.stringify(data) };
   }
 };

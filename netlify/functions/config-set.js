@@ -1,4 +1,6 @@
-// netlify/functions/config-set.js
+// POST /api/config-set — merges validated fields into the authenticated user's config in Blobs.
+const { requireSession } = require('./lib/session');
+
 const ALLOWED_KEYS = new Set(['startWeight','currentWeight','targetWeight','startDate','targetDate','stepTarget','manualSteps','wakeTime','sleepTime','caffeineProfile','caffeineDoses','weightLogs']);
 
 function isValid(key, value) {
@@ -26,15 +28,23 @@ function isValid(key, value) {
   }
 }
 
-const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
+const HDR = { 'Content-Type': 'application/json' };
 
 exports.handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: CORS, body: '' };
-  if (event.httpMethod !== 'POST') return { statusCode: 405, headers: CORS, body: JSON.stringify({ error: 'Method not allowed' }) };
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, headers: HDR, body: JSON.stringify({ error: 'Method not allowed' }) };
+  }
+
+  let session;
+  try {
+    session = await requireSession(event);
+  } catch (err) {
+    return { statusCode: 401, headers: HDR, body: JSON.stringify({ error: 'NO_SESSION' }) };
+  }
 
   let incoming;
   try { incoming = JSON.parse(event.body || '{}'); }
-  catch { return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Invalid JSON' }) }; }
+  catch { return { statusCode: 400, headers: HDR, body: JSON.stringify({ error: 'Invalid JSON' }) }; }
 
   const sanitised = {};
   for (const [k, v] of Object.entries(incoming)) {
@@ -45,13 +55,14 @@ exports.handler = async (event) => {
     const { getStore, connectLambda } = require('@netlify/blobs');
     connectLambda(event);
     const store   = getStore('vital-config');
-    const raw     = await store.get('user-config');
+    const key     = `config-${session.userId}`;
+    const raw     = await store.get(key);
     const current = raw ? JSON.parse(raw) : {};
     const merged  = { ...current, ...sanitised };
-    await store.set('user-config', JSON.stringify(merged));
-    return { statusCode: 200, headers: { ...CORS, 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: true, saved: merged }) };
+    await store.set(key, JSON.stringify(merged));
+    return { statusCode: 200, headers: HDR, body: JSON.stringify({ ok: true, saved: merged }) };
   } catch (err) {
     console.error('Blobs write error:', err.message);
-    return { statusCode: 500, headers: { ...CORS, 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Failed to save: ' + err.message }) };
+    return { statusCode: 500, headers: HDR, body: JSON.stringify({ error: 'Failed to save' }) };
   }
 };

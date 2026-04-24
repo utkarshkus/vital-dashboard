@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
+<script src="js/session-guard.js"></script>
 </head>
 <body>
 
@@ -26,6 +27,8 @@
       <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     </button>
     <button class="btn-config" id="configBtn">Configure</button>
+    <button class="btn-config" id="usersBtn" style="display:none">Users</button>
+    <a class="btn-config" href="/api/logout" style="text-decoration:none">Sign out</a>
   </div>
 </header>
 
@@ -70,6 +73,43 @@
     <div class="modal-footer">
       <div class="config-save-status" id="configSaveStatus"></div>
       <button class="btn-save" id="saveConfig">Save & Refresh</button>
+    </div>
+  </div>
+</div>
+
+<!-- Users Modal (admin only) -->
+<div class="modal-overlay" id="usersModal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h2>Manage Users</h2>
+      <button class="modal-close" id="usersModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- User list -->
+      <p class="modal-note" style="margin-bottom:1rem">Each user has isolated data (WHOOP connection, config, weight logs, caffeine).</p>
+      <div id="usersList" style="margin-bottom:1.5rem"></div>
+
+      <!-- Add user form -->
+      <div style="border-top:1px solid var(--border);padding-top:1.25rem">
+        <div class="modal-section-title" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin-bottom:.85rem">Add user</div>
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="newUsername" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="e.g. alice"/>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="newPassword" autocomplete="new-password" placeholder="min 8 characters"/>
+        </div>
+        <div class="form-group" style="display:flex;align-items:center;gap:.6rem">
+          <input type="checkbox" id="newIsAdmin" style="width:auto;margin:0">
+          <label for="newIsAdmin" style="margin:0;font-size:.8rem;color:var(--text2)">Grant admin rights</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div class="config-save-status" id="addUserStatus"></div>
+      <button class="btn-save" id="addUserBtn">Add user</button>
     </div>
   </div>
 </div>
@@ -273,7 +313,7 @@
 
 </main>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous"></script>
 <script src="js/config.js"></script>
 <script src="js/whoop.js"></script>
 <script src="js/caffeine.js"></script>

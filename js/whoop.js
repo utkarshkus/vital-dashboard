@@ -8,7 +8,8 @@ const Whoop = {
     const res = await fetch(`${PROXY}?path=${encodeURIComponent(endpoint)}`);
     if (res.status === 401) {
       const err = await res.json().catch(() => ({}));
-      // Signal auth errors distinctly so the UI can show reconnect prompt
+      if (err.error === 'NO_SESSION') { window.location.replace('/login.html'); return null; }
+      // Signal WHOOP auth errors distinctly so the UI can show reconnect prompt
       throw new Error(err.error === 'NOT_AUTHENTICATED' || err.error === 'REFRESH_FAILED'
         ? 'NOT_AUTHENTICATED'
         : 'HTTP 401');

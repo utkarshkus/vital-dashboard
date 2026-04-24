@@ -1,11 +1,11 @@
-// netlify/functions/lib/get-valid-token.js
-// Shared helper — returns a valid WHOOP access token, refreshing if expired.
+// Shared helper — returns a valid WHOOP access token for a given userId, refreshing if expired.
 
-async function getValidToken(event) {
+async function getValidToken(event, userId) {
   const { getStore, connectLambda } = require('@netlify/blobs');
   connectLambda(event);
   const store = getStore('vital-auth');
-  const raw   = await store.get('tokens').catch(() => null);
+  const key   = `tokens-${userId}`;
+  const raw   = await store.get(key).catch(() => null);
 
   if (!raw) throw new Error('NOT_AUTHENTICATED');
 
@@ -33,24 +33,19 @@ async function getValidToken(event) {
     console.error('Token refresh failed:', errText);
 
     if (res.status === 400) {
-      // WHOOP rotates refresh tokens, so only the first of N concurrent refresh
-      // attempts wins (the others get 400). Poll the store to give the winner
-      // time to persist its new tokens before concluding auth is broken.
+      // WHOOP rotates refresh tokens — give the winning concurrent request time to persist
       for (let i = 0; i < 3; i++) {
         await new Promise(r => setTimeout(r, 300));
-        const latest = await store.get('tokens').catch(() => null);
+        const latest = await store.get(key).catch(() => null);
         if (latest) {
           const latestTokens = JSON.parse(latest);
           if (Date.now() < latestTokens.expiresAt) return latestTokens.accessToken;
         }
       }
-      // Retries exhausted — the refresh token is genuinely invalid.
-      await store.delete('tokens').catch(() => {});
+      await store.delete(key).catch(() => {});
     } else if (res.status === 401) {
-      // Definitive auth rejection — clear tokens immediately.
-      await store.delete('tokens').catch(() => {});
+      await store.delete(key).catch(() => {});
     }
-    // 5xx / network errors: don't delete so a later request can retry.
 
     throw new Error('REFRESH_FAILED');
   }
@@ -61,7 +56,7 @@ async function getValidToken(event) {
     refreshToken: refreshed.refresh_token || tokens.refreshToken,
     expiresAt:    Date.now() + (refreshed.expires_in - 60) * 1000,
   };
-  await store.set('tokens', JSON.stringify(updated));
+  await store.set(key, JSON.stringify(updated));
   return updated.accessToken;
 }
 
