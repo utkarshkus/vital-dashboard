@@ -17,6 +17,8 @@ exports.handler = async (event) => {
 
   const path = event.queryStringParameters?.path;
   if (!path) return json(400, { error: 'Missing query param: path' });
+  // Reject path traversal sequences before the allowlist check.
+  if (path.includes('..') || /%2e/i.test(path)) return json(403, { error: 'Path not permitted' });
   if (!ALLOWED.some(p => path.startsWith(p))) return json(403, { error: 'Path not permitted' });
 
   let token;
