@@ -2,6 +2,7 @@
 
 const WeightTracker = {
   _chart: null,
+  _rangeCache: null,
 
   init() {
     this._bindUI();
@@ -115,20 +116,29 @@ const WeightTracker = {
     const logMap = {};
     logs.forEach(l => { logMap[l.date] = l.weight; });
 
-    const labels      = [];
-    const actualData  = [];
-    const trajectory  = [];
-    const totalMs     = toDate.getTime() - fromDate.getTime();
-
-    for (let d = new Date(fromDate); d <= toDate; d.setDate(d.getDate() + 1)) {
-      const dateStr = localStr(d);
-      labels.push(dateStr);
-      actualData.push(logMap[dateStr] !== undefined ? logMap[dateStr] : null);
-
-      // Linear trajectory: startWeight → targetWeight over the full date range
-      const progress = totalMs > 0 ? (d.getTime() - fromDate.getTime()) / totalMs : 0;
-      trajectory.push(parseFloat((start + (target - start) * Math.min(progress, 1)).toFixed(2)));
+    // labels + trajectory only depend on the date range and start/target weights.
+    // Cache them so theme toggles (which trigger render()) don't rebuild a year of points.
+    const cacheKey = `${localStr(fromDate)}|${localStr(toDate)}|${start}|${target}`;
+    let labels, trajectory;
+    if (this._rangeCache && this._rangeCache.key === cacheKey) {
+      labels     = this._rangeCache.labels;
+      trajectory = this._rangeCache.trajectory;
+    } else {
+      labels     = [];
+      trajectory = [];
+      const totalMs = toDate.getTime() - fromDate.getTime();
+      for (let d = new Date(fromDate); d <= toDate; d.setDate(d.getDate() + 1)) {
+        const dateStr  = localStr(d);
+        const progress = totalMs > 0 ? (d.getTime() - fromDate.getTime()) / totalMs : 0;
+        labels.push(dateStr);
+        trajectory.push(parseFloat((start + (target - start) * Math.min(progress, 1)).toFixed(2)));
+      }
+      this._rangeCache = { key: cacheKey, labels, trajectory };
     }
+
+    const actualData = labels.map(dateStr =>
+      logMap[dateStr] !== undefined ? logMap[dateStr] : null
+    );
 
     const allW = logs.map(l => l.weight).concat([start, target]).filter(w => !isNaN(w));
     const minY = allW.length > 0 ? Math.floor(Math.min(...allW) - 2) : target - 2;

@@ -23,6 +23,7 @@ async function rateLimit(event, action) {
 
   const raw    = await store.get(key).catch(() => null);
   const record = raw ? JSON.parse(raw) : { count: 0, windowStart: Date.now() };
+  const hadRecord = !!raw;
 
   // Reset window if it has expired
   if (Date.now() > record.windowStart + WINDOW_SEC * 1000) {
@@ -43,6 +44,8 @@ async function rateLimit(event, action) {
       await store.set(key, JSON.stringify(record), { ttl: WINDOW_SEC }).catch(() => {});
     },
     async reset() {
+      // Skip the delete round-trip on the happy path where no record exists.
+      if (!hadRecord) return;
       await store.delete(key).catch(() => {});
     },
   };

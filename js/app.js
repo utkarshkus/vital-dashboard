@@ -133,49 +133,46 @@ async function loadSleep() {
   }
 }
 
-// ─── WHOOP: Recovery ──────────────────────────────────────────
-async function loadRecovery() {
-  try {
-    const r = await Whoop.getRecovery();
-    if (!r) return;
-    document.getElementById('recoveryScoreText').textContent = r.score;
-    document.getElementById('recoveryHrv').textContent       = r.hrv + 'ms';
-    document.getElementById('recoveryRhr').textContent       = r.rhr + ' bpm';
-    document.getElementById('recoverySpo2').textContent      = r.spo2 + '%';
-    document.getElementById('recoveryCommentary').textContent = recoveryLabel(r.score);
-    const color = recoveryColor(r.score);
-    const offset = 314 * (1 - r.score / 100);
-    document.getElementById('recoveryRingFill').style.strokeDashoffset = offset.toFixed(1);
-    document.getElementById('recoveryRingFill').style.stroke = color;
-  } catch (e) {
-    console.warn('Recovery load error:', e.message);
-    if (e.message === 'NOT_AUTHENTICATED') { handleWhoopAuthError(); return; }
-    document.getElementById('recoveryCommentary').textContent = 'WHOOP data unavailable: ' + e.message;
-  }
-}
-
-// ─── WHOOP: Skin Temperature trend ────────────────────────────
+// ─── WHOOP: Recovery + skin-temp trend (single upstream call) ─
 let lastTempData = [];
 let tempChart = null;
 
-async function loadTempTrend() {
+async function loadRecoveryAndTemp() {
+  let bundle;
   try {
-    const data = await Whoop.getSkinTempTrend(14);
-    lastTempData = data;
-    renderTempChart(data);
-    if (data.length > 0) {
-      document.getElementById('tempCommentary').textContent =
-        '14-day skin temperature deviation. Normal range ±0.5°C.';
-      const latest = data[data.length - 1].temp;
-      document.getElementById('tempDelta').textContent =
-        (latest >= 0 ? '+' : '') + latest.toFixed(2);
-      document.getElementById('tempDelta').style.color =
-        Math.abs(latest) > 0.5 ? '#f07070' : '#a0f0b0';
-    }
+    bundle = await Whoop.getRecoveryBundle(14);
   } catch (e) {
-    console.warn('Temp trend error:', e.message);
+    console.warn('Recovery/temp load error:', e.message);
+    if (e.message === 'NOT_AUTHENTICATED') { handleWhoopAuthError(); return; }
+    document.getElementById('recoveryCommentary').textContent = 'WHOOP data unavailable: ' + e.message;
+    document.getElementById('tempCommentary').textContent     = 'Could not load temperature data: ' + e.message;
+    return;
+  }
+
+  const r = bundle.latest;
+  if (r) {
+    document.getElementById('recoveryScoreText').textContent  = r.score;
+    document.getElementById('recoveryHrv').textContent        = r.hrv + 'ms';
+    document.getElementById('recoveryRhr').textContent        = r.rhr + ' bpm';
+    document.getElementById('recoverySpo2').textContent       = r.spo2 + '%';
+    document.getElementById('recoveryCommentary').textContent = recoveryLabel(r.score);
+    const color  = recoveryColor(r.score);
+    const offset = 314 * (1 - r.score / 100);
+    document.getElementById('recoveryRingFill').style.strokeDashoffset = offset.toFixed(1);
+    document.getElementById('recoveryRingFill').style.stroke           = color;
+  }
+
+  const trend = bundle.trend;
+  lastTempData = trend;
+  renderTempChart(trend);
+  if (trend.length > 0) {
     document.getElementById('tempCommentary').textContent =
-      'Could not load temperature data: ' + e.message;
+      '14-day skin temperature deviation. Normal range ±0.5°C.';
+    const latest = trend[trend.length - 1].temp;
+    document.getElementById('tempDelta').textContent =
+      (latest >= 0 ? '+' : '') + latest.toFixed(2);
+    document.getElementById('tempDelta').style.color =
+      Math.abs(latest) > 0.5 ? '#f07070' : '#a0f0b0';
   }
 }
 
@@ -246,7 +243,7 @@ async function boot() {
   // Fetch WHOOP data
   setSyncStatus('', 'fetching WHOOP…');
   try {
-    await Promise.all([loadSleep(), loadRecovery(), loadTempTrend(), loadCycle()]);
+    await Promise.all([loadSleep(), loadRecoveryAndTemp(), loadCycle()]);
     setSyncStatus('live', 'synced ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
   } catch (e) {
     setSyncStatus('error', 'WHOOP sync error');
