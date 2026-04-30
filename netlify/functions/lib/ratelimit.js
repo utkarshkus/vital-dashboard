@@ -14,7 +14,9 @@ async function rateLimit(event, action) {
   connectLambda(event);
   const store = getStore('vital-ratelimit');
 
-  const ip  = (event.headers?.['x-forwarded-for'] || '').split(',')[0].trim()
+  // x-nf-client-connection-ip is set by Netlify's CDN and cannot be spoofed by clients.
+  // x-forwarded-for first entry is client-controlled and must not be used for security decisions.
+  const ip  = event.headers?.['x-nf-client-connection-ip']
             || event.headers?.['client-ip']
             || 'unknown';
   const key = `${action}:${ip}`;
