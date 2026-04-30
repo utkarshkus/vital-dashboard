@@ -56,20 +56,40 @@ const Whoop = {
     };
   },
 
-  // Latest recovery record
-  async getRecovery() {
-    const data = await this._get('/recovery?limit=1');
-    const record = data.records?.[0];
-    if (!record) return null;
+  // Latest recovery record + skin-temperature trend in a single upstream call.
+  // Returns { latest, trend } where latest is the most recent recovery record
+  // (same shape as the old getRecovery) and trend is the per-day temp deviation
+  // series (same shape as the old getSkinTempTrend).
+  async getRecoveryBundle(days = 14) {
+    const end = new Date();
+    const start = new Date(end - days * 86400000);
+    const fmt = d => d.toISOString();
+    const data = await this._get(
+      `/recovery?limit=${days}&start=${encodeURIComponent(fmt(start))}&end=${encodeURIComponent(fmt(end))}`
+    );
+    const records = (data.records || []).reverse(); // chronological
 
-    const s = record.score || {};
-    return {
-      score: Math.round(s.recovery_score || 0),
-      hrv: Math.round(s.hrv_rmssd_milli || 0),
-      rhr: Math.round(s.resting_heart_rate || 0),
-      spo2: ((s.spo2_percentage || 0)).toFixed(1),
-      raw: record,
-    };
+    let latest = null;
+    if (records.length > 0) {
+      const r = records[records.length - 1];
+      const s = r.score || {};
+      latest = {
+        score: Math.round(s.recovery_score || 0),
+        hrv: Math.round(s.hrv_rmssd_milli || 0),
+        rhr: Math.round(s.resting_heart_rate || 0),
+        spo2: ((s.spo2_percentage || 0)).toFixed(1),
+        raw: r,
+      };
+    }
+
+    const temps = records.map(r => r.score?.skin_temp_celsius || 0);
+    const mean = temps.length ? temps.reduce((a, b) => a + b, 0) / temps.length : 0;
+    const trend = records.map((r, i) => ({
+      date: r.created_at?.split('T')[0] || '—',
+      temp: parseFloat((temps[i] - mean).toFixed(2)),
+    }));
+
+    return { latest, trend };
   },
 
   // Today's physiological cycle — strain, kilojoules, avg HR
@@ -88,22 +108,6 @@ const Whoop = {
     };
   },
 
-  // Skin temperature trend — last 14 days
-  async getSkinTempTrend(days = 14) {
-    const end = new Date();
-    const start = new Date(end - days * 86400000);
-    const fmt = d => d.toISOString();
-    const data = await this._get(
-      `/recovery?limit=${days}&start=${encodeURIComponent(fmt(start))}&end=${encodeURIComponent(fmt(end))}`
-    );
-    const records = (data.records || []).reverse();
-    const temps = records.map(r => r.score?.skin_temp_celsius || 0);
-    const mean = temps.length ? temps.reduce((a, b) => a + b, 0) / temps.length : 0;
-    return records.map((r, i) => ({
-      date: r.created_at?.split('T')[0] || '—',
-      temp: parseFloat((temps[i] - mean).toFixed(2)),
-    }));
-  },
 };
 
 // Recovery score → color mapping

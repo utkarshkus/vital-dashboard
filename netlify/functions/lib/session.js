@@ -31,17 +31,32 @@ async function getSession(event) {
 }
 
 async function requireSession(event) {
-  const session = await getSession(event);
-  if (!session) {
+  const cookie = event.headers?.cookie || '';
+  const match = cookie.match(/vital_session=([a-f0-9]{64})/);
+  if (!match) {
+    const err = new Error('NO_SESSION');
+    err.statusCode = 401;
+    throw err;
+  }
+  const token = match[1];
+
+  // Fetch session blob and users blob in parallel — they're independent network calls.
+  const { getUsers } = require('./users');
+  const store = await _store(event);
+  const [raw, users] = await Promise.all([
+    store.get(token).catch(() => null),
+    getUsers(event),
+  ]);
+
+  if (!raw) {
     const err = new Error('NO_SESSION');
     err.statusCode = 401;
     throw err;
   }
 
+  const session = { token, ...JSON.parse(raw) };
   // Verify the session's tokenVersion still matches the user's current version.
   // If the user changed their password since this session was created, it won't match.
-  const { getUsers } = require('./users');
-  const users = await getUsers(event);
   const user = Object.values(users).find(u => u.userId === session.userId);
   if (!user || (user.tokenVersion || 0) !== (session.tokenVersion || 0)) {
     const err = new Error('NO_SESSION');
