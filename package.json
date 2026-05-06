@@ -3,8 +3,22 @@
   "version": "1.0.0",
   "description": "Personal health & weight loss dashboard with WHOOP integration",
   "private": true,
+  "scripts": {
+    "db:generate":       "drizzle-kit generate",
+    "db:migrate":        "drizzle-kit migrate",
+    "db:studio":         "drizzle-kit studio",
+    "migrate:blobs:dry": "tsx scripts/migrate-blobs-to-db.ts --dry-run",
+    "migrate:blobs":     "tsx scripts/migrate-blobs-to-db.ts",
+    "verify:migration":  "tsx scripts/verify-migration.ts"
+  },
   "dependencies": {
     "@netlify/blobs": "^10.7.4",
-    "@netlify/functions": "^5.2.0"
+    "@netlify/functions": "^5.2.0",
+    "@netlify/neon": "^0.1.2",
+    "drizzle-orm": "^0.45.2"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.21.0"
   }
 }
