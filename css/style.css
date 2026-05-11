@@ -361,6 +361,15 @@ body {
 .smeta-key { color: var(--text2); }
 .smeta-val { color: var(--text); font-weight: 500; }
 
+.sleep-span-row { gap: 10px; }
+.sleep-span-row .sleep-arrow {
+  flex: 1;
+  height: 18px;
+  min-width: 40px;
+  color: var(--text3);
+  opacity: 0.85;
+}
+
 .commentary {
   font-size: 0.72rem;
   color: var(--text2);
