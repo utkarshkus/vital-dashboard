@@ -28,6 +28,7 @@ const WeightTracker = {
   async _logEntry() {
     const inp     = document.getElementById('logWeightInput');
     const dateInp = document.getElementById('logWeightDate');
+    const btn     = document.getElementById('logWeightBtn');
     if (!inp) return;
 
     const val = parseFloat(inp.value);
@@ -55,11 +56,31 @@ const WeightTracker = {
     // Keep at most 365 entries
     if (logs.length > 365) logs.splice(0, logs.length - 365);
 
-    await Config.set('weightLogs', logs);
-
-    // Keep currentWeight in sync with the most recent entry
+    // Persist weightLogs + currentWeight in a single POST. Two sequential
+    // Config.set calls hit the server as separate lambda invocations and can
+    // race against each other (last write wins on the merged blob), which has
+    // caused logs to vanish on refresh. One saveAll = one atomic merge.
     const latest = logs[logs.length - 1];
-    if (latest) await Config.set('currentWeight', latest.weight);
+    const result = await Config.saveAll(
+      latest
+        ? { weightLogs: logs, currentWeight: latest.weight }
+        : { weightLogs: logs }
+    );
+
+    if (btn) {
+      if (result && result.ok === false) {
+        btn.textContent = 'Save failed — retry';
+        btn.classList.add('weight-log-btn-error');
+        setTimeout(() => {
+          btn.textContent = 'Log';
+          btn.classList.remove('weight-log-btn-error');
+        }, 3500);
+        // Leave the inputs populated so the user can retry without re-typing.
+        return;
+      }
+      btn.textContent = 'Saved ✓';
+      setTimeout(() => { btn.textContent = 'Log'; }, 1200);
+    }
 
     inp.value = '';
     if (dateInp) dateInp.value = this._todayStr();
