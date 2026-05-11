@@ -286,6 +286,8 @@ body {
   flex-shrink: 0;
 }
 .weight-log-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+.weight-log-btn-error { border-color: var(--danger); color: var(--danger); }
+.weight-log-btn-error:hover { border-color: var(--danger); color: var(--danger); }
 
 /* Recent entries */
 .weight-log {
