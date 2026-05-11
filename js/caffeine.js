@@ -214,29 +214,35 @@ const CaffeineTracker = {
     const sleep = parseTime(sleepStr, now);
     if (sleep <= wake) sleep.setDate(sleep.getDate() + 1);
 
-    // x-axis spans exactly wake → sleep; minutes from wake is the x unit
-    const sleepMinutes = (sleep - wake) / 60000;
-    const nowMinutes   = (now - wake) / 60000;
+    // x-axis spans the full calendar day: 00:00 → 24:00 (midnight to midnight)
+    const dayStart = new Date(now);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayStart.getTime() + 24 * 3600000);
+
+    const totalMinutes = 24 * 60; // 1440
+    const wakeMinutes  = (wake  - dayStart) / 60000;
+    const sleepMinutes = (sleep - dayStart) / 60000;
+    const nowMinutes   = (now   - dayStart) / 60000;
     const step = 10 * 60000; // 10-minute resolution
 
     const caffPoints = [];
     const pxPoints   = [];
 
-    for (let ts = wake.getTime(); ts <= sleep.getTime(); ts += step) {
+    for (let ts = dayStart.getTime(); ts <= dayEnd.getTime(); ts += step) {
       const t = new Date(ts);
-      const x    = (ts - wake.getTime()) / 60000;
+      const x    = (ts - dayStart.getTime()) / 60000;
       const caff = Math.max(0, this._caffeineOnlyAt(t));
       const px   = Math.max(0, this._paraxanthineOnlyAt(t));
       caffPoints.push({ x, y: parseFloat(caff.toFixed(1)) });
       pxPoints.push({ x, y: parseFloat(px.toFixed(1)) });
     }
 
-    return { caffPoints, pxPoints, wake, sleep, now, step, sleepMinutes, nowMinutes };
+    return { caffPoints, pxPoints, wake, sleep, now, step, dayStart, dayEnd, totalMinutes, wakeMinutes, sleepMinutes, nowMinutes };
   },
 
   // ─── Render ──────────────────────────────────────────────
   render() {
-    const { caffPoints, pxPoints, wake, sleep, now, step, sleepMinutes, nowMinutes } = this._buildCurve();
+    const { caffPoints, pxPoints, wake, sleep, now, step, dayStart, totalMinutes, wakeMinutes, sleepMinutes, nowMinutes } = this._buildCurve();
 
     const isDark    = document.documentElement.getAttribute('data-theme') !== 'light';
     const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
@@ -375,13 +381,49 @@ const CaffeineTracker = {
     // ── Chart.js ─────────────────────────────────────────
 
     const annotations = [];
-    annotations.push({ xValue: sleepMinutes, label: 'Sleep target', color: isDark ? '#68d9e0' : '#0e8090' });
-    if (nowMinutes > 0 && nowMinutes < sleepMinutes) {
+    if (wakeMinutes >= 0 && wakeMinutes <= totalMinutes) {
+      annotations.push({ xValue: wakeMinutes, label: 'Wake', color: isDark ? '#f0c070' : '#b07000' });
+    }
+    if (sleepMinutes >= 0 && sleepMinutes <= totalMinutes) {
+      annotations.push({ xValue: sleepMinutes, label: 'Sleep target', color: isDark ? '#68d9e0' : '#0e8090' });
+    }
+    if (nowMinutes >= 0 && nowMinutes <= totalMinutes) {
       annotations.push({ xValue: nowMinutes, label: 'Now', color: isDark ? '#a0f0b0' : '#1a9e50' });
     }
 
     const ctx = document.getElementById('caffeineChart').getContext('2d');
     if (this._chart) { this._chart.destroy(); this._chart = null; }
+
+    // Shade the awake window (wake → sleep) within the full-day axis
+    const awakeStart = Math.max(0, wakeMinutes);
+    const awakeEnd   = Math.min(totalMinutes, sleepMinutes);
+    const awakeFill  = isDark ? 'rgba(255,255,255,0.035)' : 'rgba(0,0,0,0.025)';
+    const awakeBorder = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
+
+    const awakeWindowPlugin = {
+      id: 'awakeWindow',
+      beforeDatasetsDraw(chart) {
+        if (awakeEnd <= awakeStart) return;
+        const { ctx, scales, chartArea } = chart;
+        const xStart = scales.x.getPixelForValue(awakeStart);
+        const xEnd   = scales.x.getPixelForValue(awakeEnd);
+        ctx.save();
+        ctx.fillStyle = awakeFill;
+        ctx.fillRect(xStart, chartArea.top, xEnd - xStart, chartArea.bottom - chartArea.top);
+        ctx.strokeStyle = awakeBorder;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(xStart, chartArea.top); ctx.lineTo(xStart, chartArea.bottom);
+        ctx.moveTo(xEnd,   chartArea.top); ctx.lineTo(xEnd,   chartArea.bottom);
+        ctx.stroke();
+        ctx.fillStyle = textColor;
+        ctx.font = '9px DM Mono, monospace';
+        ctx.textAlign = 'center';
+        const midX = (xStart + xEnd) / 2;
+        if (xEnd - xStart > 60) ctx.fillText('Awake window', midX, chartArea.bottom - 4);
+        ctx.restore();
+      }
+    };
 
     const verticalLinePlugin = {
       id: 'vertLines',
@@ -410,7 +452,7 @@ const CaffeineTracker = {
 
     this._chart = new Chart(ctx, {
       type: 'line',
-      plugins: [verticalLinePlugin],
+      plugins: [awakeWindowPlugin, verticalLinePlugin],
       data: {
         datasets: [
           {
@@ -451,7 +493,7 @@ const CaffeineTracker = {
             callbacks: {
               title: function(items) {
                 const xVal = items[0].parsed.x;
-                const t = new Date(wake.getTime() + xVal * 60000);
+                const t = new Date(dayStart.getTime() + xVal * 60000);
                 return t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
               },
               label: function(item) {
@@ -474,14 +516,15 @@ const CaffeineTracker = {
           x: {
             type: 'linear',
             min: 0,
-            max: sleepMinutes,
+            max: totalMinutes,
             ticks: {
               color: textColor,
               font: { size: 9, family: 'DM Mono' },
               maxRotation: 0,
               maxTicksLimit: 8,
+              stepSize: 180,
               callback: function(v) {
-                const t = new Date(wake.getTime() + v * 60000);
+                const t = new Date(dayStart.getTime() + v * 60000);
                 return t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
               },
             },
