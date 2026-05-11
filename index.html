@@ -173,7 +173,16 @@
       <div class="score-row"><span class="smeta-key">Duration</span><span class="smeta-val" id="sleepDuration">—</span></div>
       <div class="score-row"><span class="smeta-key">Efficiency</span><span class="smeta-val" id="sleepEfficiency">—</span></div>
       <div class="score-row"><span class="smeta-key">REM</span><span class="smeta-val" id="sleepRem">—</span></div>
-      <div class="score-row"><span class="smeta-key" id="sleepOnsetTime">Slept —</span><span class="smeta-val" id="sleepWakeTime">Woke —</span></div>
+      <div class="score-row sleep-span-row">
+        <span class="smeta-key" id="sleepOnsetTime">Slept —</span>
+        <svg class="sleep-arrow" viewBox="0 0 100 20" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M2 14 Q 50 -2 92 14" fill="none" stroke="currentColor" stroke-width="1.2"
+                stroke-linecap="round" stroke-dasharray="2 3" />
+          <path d="M92 14 L86 10 M92 14 L86 17" fill="none" stroke="currentColor"
+                stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <span class="smeta-val" id="sleepWakeTime">Woke —</span>
+      </div>
     </div>
     <p class="commentary" id="sleepCommentary">Configure WHOOP token to load sleep data.</p>
   </div>
