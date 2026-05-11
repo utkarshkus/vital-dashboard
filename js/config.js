@@ -36,6 +36,7 @@ const DEFAULTS = {
 const Config = {
   _data: { ...DEFAULTS },
   _serverLoaded: false,
+  _initPromise: null,
 
   // ─── Fetch all server fields ────────────────────────────────
   async _loadServer() {
@@ -68,9 +69,13 @@ const Config = {
   },
 
   // ─── Public init — await this before rendering tiles ────────
-  async init() {
-    await this._loadServer();
-    return this;
+  // Memoised so concurrent callers (e.g. boot() and WeightTracker._logEntry)
+  // share one in-flight load instead of racing against an empty _data.
+  init() {
+    if (!this._initPromise) {
+      this._initPromise = this._loadServer().then(() => this);
+    }
+    return this._initPromise;
   },
 
   // ─── Read a value ───────────────────────────────────────────
