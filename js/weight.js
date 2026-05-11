@@ -36,6 +36,11 @@ const WeightTracker = {
     const today   = this._todayStr();
     const dateStr = (dateInp && dateInp.value) ? dateInp.value : today;
 
+    // Make sure Config has loaded from the server before mutating weightLogs.
+    // Otherwise we'd merge into the empty default array and clobber the user's
+    // existing logs on the server.
+    await Config.init();
+
     const logs = (Config.get('weightLogs') || []).slice();
 
     // Upsert: overwrite if same date already logged

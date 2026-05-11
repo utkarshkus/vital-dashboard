@@ -82,9 +82,13 @@ const Whoop = {
       };
     }
 
-    const temps = records.map(r => r.score?.skin_temp_celsius || 0);
+    // Only include records with an actual skin-temp reading. Falling back to 0
+    // for missing values pulls the mean way below body temperature (~33-34°C),
+    // which makes every day's deviation look wildly off.
+    const tempRecords = records.filter(r => typeof r.score?.skin_temp_celsius === 'number' && r.score.skin_temp_celsius > 0);
+    const temps = tempRecords.map(r => r.score.skin_temp_celsius);
     const mean = temps.length ? temps.reduce((a, b) => a + b, 0) / temps.length : 0;
-    const trend = records.map((r, i) => ({
+    const trend = tempRecords.map((r, i) => ({
       date: r.created_at?.split('T')[0] || '—',
       temp: parseFloat((temps[i] - mean).toFixed(2)),
     }));
