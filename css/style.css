@@ -336,6 +336,7 @@ body {
 }
 
 .ring-sleep { stroke: var(--sleep-color); }
+.ring-apnea { stroke: var(--accent); }
 
 .ring-score {
   font-family: var(--font-head);
