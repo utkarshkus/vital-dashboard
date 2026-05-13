@@ -94,10 +94,13 @@ function populateModal() {
 }
 
 // ─── WHOOP: Sleep ──────────────────────────────────────────────
+let lastSleepData = null;
+
 async function loadSleep() {
   try {
     const s = await Whoop.getSleep();
     if (!s) return;
+    lastSleepData = s;
 
     document.getElementById('sleepScoreText').textContent  = s.score;
     document.getElementById('sleepDuration').textContent   = s.durationH + 'h';
@@ -135,6 +138,7 @@ async function loadSleep() {
 
 // ─── WHOOP: Recovery + skin-temp trend (single upstream call) ─
 let lastTempData = [];
+let lastRecoveryData = null;
 let tempChart = null;
 
 async function loadRecoveryAndTemp() {
@@ -150,6 +154,7 @@ async function loadRecoveryAndTemp() {
   }
 
   const r = bundle.latest;
+  lastRecoveryData = r;
   if (r) {
     document.getElementById('recoveryScoreText').textContent  = r.score;
     document.getElementById('recoveryHrv').textContent        = r.hrv + 'ms';
@@ -225,6 +230,76 @@ async function loadCycle() {
   }
 }
 
+// ─── Sleep Apnea Risk ──────────────────────────────────────────
+// Composite 0–100 score (higher = more risk). Built from WHOOP signals
+// associated with obstructive sleep apnea: overnight SpO2 desaturation
+// (primary), elevated resting HR, suppressed HRV, fragmented sleep, and
+// reduced REM share. Educational only — not a clinical screening tool.
+function computeApneaRisk(sleep, recovery) {
+  if (!sleep || !recovery) return null;
+
+  const spo2 = parseFloat(recovery.spo2);
+  const rhr = recovery.rhr;
+  const hrv = recovery.hrv;
+  const efficiency = sleep.efficiency;
+  const durationH = parseFloat(sleep.durationH);
+  const remShare = durationH > 0 ? (sleep.remMin / (durationH * 60)) * 100 : 0;
+
+  const clamp = v => Math.max(0, Math.min(100, v));
+
+  // SpO2 ≥97% clean; each 1% drop scales risk steeply (≤92% saturates).
+  const spo2Risk = clamp((97 - spo2) * 20);
+  // RHR: 55 bpm baseline; 80+ saturates.
+  const rhrRisk  = clamp((rhr - 55) * 4);
+  // HRV: depressed autonomic tone — 60ms clean, ≤10ms saturates.
+  const hrvRisk  = clamp((60 - hrv) * 2);
+  // Sleep efficiency: 92%+ clean, ≤67% saturates.
+  const effRisk  = clamp((92 - efficiency) * 4);
+  // REM share: ~20% typical; suppressed REM is an OSA signature.
+  const remRisk  = clamp((20 - remShare) * 5);
+
+  const score = Math.round(
+    0.45 * spo2Risk +
+    0.15 * rhrRisk +
+    0.15 * hrvRisk +
+    0.15 * effRisk +
+    0.10 * remRisk
+  );
+
+  return { score, spo2, rhr, hrv, efficiency, remShare };
+}
+
+function apneaTier(score) {
+  if (score >= 60) return { label: 'elevated', color: '#f07070',
+    msg: 'Elevated risk signals. Consider discussing screening (e.g. STOP-BANG, home sleep study) with a clinician — especially if you snore, wake gasping, or feel unrested.' };
+  if (score >= 30) return { label: 'moderate', color: '#f0c070',
+    msg: 'Some risk markers present. Watch overnight SpO2 trend across multiple nights — single low readings can be positional.' };
+  return { label: 'low', color: '#a0f0b0',
+    msg: 'Risk markers within normal range. Educational estimate — not a diagnostic tool.' };
+}
+
+function renderApneaRisk() {
+  const result = computeApneaRisk(lastSleepData, lastRecoveryData);
+  if (!result) return;
+
+  document.getElementById('apneaScoreText').textContent = result.score;
+  document.getElementById('apneaSpo2').textContent = result.spo2.toFixed(1) + '%';
+  document.getElementById('apneaRhr').textContent  = result.rhr + ' bpm';
+  document.getElementById('apneaHrv').textContent  = result.hrv + ' ms';
+  document.getElementById('apneaEff').textContent  = result.efficiency + '%';
+  document.getElementById('apneaRem').textContent  = result.remShare.toFixed(0) + '%';
+
+  const tier = apneaTier(result.score);
+  document.getElementById('apneaTierText').textContent = tier.label + ' risk';
+  document.getElementById('apneaCommentary').textContent = tier.msg;
+
+  // Higher score = more risk → ring fills more.
+  const offset = 314 * (1 - result.score / 100);
+  const ring = document.getElementById('apneaRingFill');
+  ring.style.strokeDashoffset = offset.toFixed(1);
+  ring.style.stroke = tier.color;
+}
+
 // ─── Boot ──────────────────────────────────────────────────────
 async function boot() {
   setSyncStatus('', 'loading config…');
@@ -244,6 +319,7 @@ async function boot() {
   setSyncStatus('', 'fetching WHOOP…');
   try {
     await Promise.all([loadSleep(), loadRecoveryAndTemp(), loadCycle()]);
+    renderApneaRisk();
     setSyncStatus('live', 'synced ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
   } catch (e) {
     setSyncStatus('error', 'WHOOP sync error');

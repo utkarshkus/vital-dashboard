@@ -213,7 +213,32 @@
     <p class="commentary" id="recoveryCommentary">Configure WHOOP token to load recovery data.</p>
   </div>
 
-  <!-- Tile 4: Caffeine Window -->
+  <!-- Tile 4: Sleep Apnea Risk -->
+  <div class="tile tile-apnea" id="tileApnea">
+    <div class="tile-header">
+      <span class="tile-label">Sleep Apnea Risk</span>
+      <span class="tile-badge whoop-badge">WHOOP</span>
+    </div>
+    <div class="score-ring-wrap">
+      <svg class="score-ring" viewBox="0 0 120 120">
+        <circle class="ring-bg" cx="60" cy="60" r="50" />
+        <circle class="ring-fill ring-apnea" id="apneaRingFill" cx="60" cy="60" r="50"
+          stroke-dasharray="314" stroke-dashoffset="314" />
+        <text class="ring-score" id="apneaScoreText" x="60" y="56" text-anchor="middle">—</text>
+        <text class="ring-sub" id="apneaTierText" x="60" y="74" text-anchor="middle">— risk</text>
+      </svg>
+    </div>
+    <div class="score-meta">
+      <div class="score-row"><span class="smeta-key">SpO2 (sleep)</span><span class="smeta-val" id="apneaSpo2">—</span></div>
+      <div class="score-row"><span class="smeta-key">Resting HR</span><span class="smeta-val" id="apneaRhr">—</span></div>
+      <div class="score-row"><span class="smeta-key">HRV</span><span class="smeta-val" id="apneaHrv">—</span></div>
+      <div class="score-row"><span class="smeta-key">Efficiency</span><span class="smeta-val" id="apneaEff">—</span></div>
+      <div class="score-row"><span class="smeta-key">REM share</span><span class="smeta-val" id="apneaRem">—</span></div>
+    </div>
+    <p class="commentary" id="apneaCommentary">Awaiting sleep + recovery data.</p>
+  </div>
+
+  <!-- Tile 5: Caffeine Window -->
   <div class="tile tile-caffeine tile-wide" id="tileCaffeine">
 
     <!-- Header -->
