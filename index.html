@@ -329,6 +329,74 @@
     <div class="caffeine-log" id="caffeineLog"></div>
   </div>
 
+  <!-- Tile 7: WHOOP Phase Response Curve (circadian clock) -->
+  <div class="tile tile-prc" id="tilePRC">
+    <div class="tile-header">
+      <span class="tile-label">Circadian Phase</span>
+      <div class="prc-head-right">
+        <span class="prc-shift-badge" id="prcShiftBadge" style="display:none">⚡ Zones shifted today</span>
+        <button class="prc-info-btn" id="prcInfoBtn" aria-label="Science references" title="Science references">ⓘ</button>
+        <span class="tile-badge whoop-badge">WHOOP</span>
+      </div>
+    </div>
+
+    <div class="prc-clock-wrap">
+      <svg class="prc-clock" id="prcClock" viewBox="0 0 240 240" role="img" aria-label="24-hour circadian phase clock">
+        <!-- background ring -->
+        <circle cx="120" cy="120" r="92" class="prc-ring-bg" />
+
+        <!-- zone arcs (rendered by prc.js) -->
+        <g id="prcZones"></g>
+
+        <!-- hour labels -->
+        <g class="prc-hour-labels">
+          <text x="120" y="18"  text-anchor="middle">00:00</text>
+          <text x="225" y="124" text-anchor="middle">06:00</text>
+          <text x="120" y="232" text-anchor="middle">12:00</text>
+          <text x="15"  y="124" text-anchor="middle">18:00</text>
+        </g>
+
+        <!-- minima dot (red) — set by JS -->
+        <circle id="prcMinima" cx="120" cy="28" r="4.5" class="prc-minima" style="display:none" />
+
+        <!-- current-zone triangle marker — set by JS -->
+        <polygon id="prcZoneMarker" points="" class="prc-zone-marker" style="display:none" />
+
+        <!-- live current-time pointer -->
+        <line id="prcPointer" x1="120" y1="60" x2="120" y2="20" class="prc-pointer" />
+
+        <!-- center readouts -->
+        <text x="120" y="104" text-anchor="middle" class="prc-center-label" id="prcCenterLabel">ENDS IN</text>
+        <text x="120" y="125" text-anchor="middle" class="prc-center-time" id="prcCountdown">--:--:--</text>
+        <text x="120" y="145" text-anchor="middle" class="prc-center-zone" id="prcCurrentZone">—</text>
+      </svg>
+
+      <div class="prc-tooltip" id="prcTooltip" style="display:none"></div>
+      <div class="prc-warning" id="prcWarning" style="display:none">⚠ Sleep &lt; 4hrs — zones may be inaccurate</div>
+    </div>
+
+    <div class="prc-meta">
+      <div class="prc-mstat">
+        <span class="prc-mlabel">Wake</span>
+        <span class="prc-mval" id="prcWake">—</span>
+      </div>
+      <div class="prc-mstat">
+        <span class="prc-mlabel">Mid-sleep</span>
+        <span class="prc-mval" id="prcMidsleep">—</span>
+      </div>
+      <div class="prc-mstat">
+        <span class="prc-mlabel">T₀</span>
+        <span class="prc-mval" id="prcT0">—</span>
+      </div>
+      <div class="prc-mstat">
+        <span class="prc-mlabel">Recovery</span>
+        <span class="prc-mval" id="prcRecovery">—</span>
+      </div>
+    </div>
+
+    <p class="commentary" id="prcCommentary">Awaiting WHOOP sleep data — showing demo zones.</p>
+  </div>
+
   <!-- Tile 6: Skin Temperature -->
   <div class="tile tile-temp" id="tileTemp">
     <div class="tile-header">
@@ -347,11 +415,34 @@
 
 </main>
 
+<!-- PRC Science Modal -->
+<div class="modal-overlay" id="prcModal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h2>Circadian Phase Response Curve</h2>
+      <button class="modal-close" id="prcModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-note">The phase response curve describes how stimuli — light, food, exercise — shift your circadian clock depending on when they're applied relative to your biological midnight (T₀).</p>
+      <ul class="prc-refs">
+        <li><strong style="color:#7c3aed">Phase Delay</strong> (T₀−4h → T₀+2h) — pre-minima stimuli delay your clock (useful for shifting later / westward travel).</li>
+        <li><strong style="color:#ef4444">Minima</strong> (T₀+2h) — core body temperature low, the inflection point of the curve.</li>
+        <li><strong style="color:#3b82f6">Phase Advance</strong> (T₀+4h → T₀+10h) — post-minima stimuli advance your clock (useful for shifting earlier / eastward travel).</li>
+        <li><strong style="color:#14b8a6">Dead Zone</strong> (T₀+10h → T₀+20h) — clock relatively unresponsive to phase-shifting stimuli.</li>
+      </ul>
+      <p class="prc-refs-note">
+        Youngstedt 2019 — exercise PRC. Khalsa 2003 — light PRC. Beytebiere 2022 — food entrainment.
+      </p>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous"></script>
 <script src="js/config.js"></script>
 <script src="js/whoop.js"></script>
 <script src="js/caffeine.js"></script>
 <script src="js/weight.js"></script>
+<script src="js/prc.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

@@ -888,3 +888,210 @@ body {
 .btn-connect:hover { opacity: 0.85; }
 
 [data-theme="light"] .btn-connect { color: #fff; background: var(--warn); }
+
+/* ─── PRC (Phase Response Curve) Tile ────────────────────────── */
+.tile-prc { min-height: 320px; }
+
+.prc-head-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.prc-shift-badge {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: rgba(240,192,112,0.1);
+  border: 1px solid rgba(240,192,112,0.3);
+  color: var(--warn);
+}
+
+.prc-info-btn {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface2);
+  color: var(--text2);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: border-color 0.2s, color 0.2s;
+}
+.prc-info-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+
+.prc-clock-wrap {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+  min-height: 220px;
+  padding: 4px 0;
+}
+
+.prc-clock {
+  width: 220px;
+  height: 220px;
+  max-width: 100%;
+}
+
+.prc-ring-bg {
+  fill: none;
+  stroke: var(--surface2);
+  stroke-width: 1;
+}
+
+.prc-arc {
+  fill: none;
+  stroke-width: 12;
+  stroke-linecap: round;
+  cursor: pointer;
+  opacity: 0.85;
+  transition: opacity 0.2s, stroke-width 0.2s;
+}
+.prc-arc:hover, .prc-arc:focus { opacity: 1; stroke-width: 14; outline: none; }
+
+.prc-minima {
+  fill: #ef4444;
+  stroke: var(--bg);
+  stroke-width: 1.5;
+}
+
+.prc-pointer {
+  stroke: var(--text);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  opacity: 0.9;
+}
+
+.prc-zone-marker {
+  stroke: var(--bg);
+  stroke-width: 0.5;
+  pointer-events: none;
+}
+
+.prc-hour-labels text {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  fill: var(--text3);
+  letter-spacing: 0.05em;
+}
+
+.prc-center-label {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  letter-spacing: 0.18em;
+  fill: var(--text3);
+  text-transform: uppercase;
+}
+
+.prc-center-time {
+  font-family: var(--font-head);
+  font-size: 19px;
+  font-weight: 600;
+  fill: var(--text);
+}
+
+.prc-center-zone {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.05em;
+  fill: var(--text2);
+  text-transform: uppercase;
+}
+
+.prc-tooltip {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  padding: 5px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.prc-warning {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  padding: 3px 9px;
+  background: rgba(240,192,112,0.1);
+  border: 1px solid rgba(240,192,112,0.3);
+  border-radius: 20px;
+  color: var(--warn);
+  white-space: nowrap;
+}
+
+.prc-meta {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.prc-mstat {
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.prc-mlabel {
+  font-size: 0.6rem;
+  color: var(--text3);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.prc-mval {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prc-refs {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.prc-refs li {
+  font-size: 0.78rem;
+  color: var(--text2);
+  line-height: 1.5;
+  padding: 8px 10px;
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  border-left: 2px solid var(--border2);
+}
+.prc-refs-note {
+  font-size: 0.7rem;
+  color: var(--text3);
+  font-style: italic;
+  margin-top: 4px;
+}
