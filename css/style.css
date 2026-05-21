@@ -890,7 +890,7 @@ body {
 [data-theme="light"] .btn-connect { color: #fff; background: var(--warn); }
 
 /* ─── PRC (Phase Response Curve) Tile ────────────────────────── */
-.tile-prc { min-height: 320px; }
+.tile-prc { min-height: 420px; }
 
 .prc-head-right {
   display: flex;
@@ -934,79 +934,153 @@ body {
   justify-content: center;
   align-items: center;
   flex: 1;
-  min-height: 220px;
+  min-height: 260px;
   padding: 4px 0;
 }
 
 .prc-clock {
-  width: 220px;
-  height: 220px;
+  width: 260px;
+  height: 260px;
   max-width: 100%;
+  overflow: visible;
 }
 
 .prc-ring-bg {
   fill: none;
   stroke: var(--surface2);
   stroke-width: 1;
+  opacity: 0.5;
 }
 
 .prc-arc {
   fill: none;
-  stroke-width: 12;
+  stroke-width: 15;
   stroke-linecap: round;
   cursor: pointer;
-  opacity: 0.85;
-  transition: opacity 0.2s, stroke-width 0.2s;
+  transition: stroke-width 0.2s, filter 0.2s;
 }
-.prc-arc:hover, .prc-arc:focus { opacity: 1; stroke-width: 14; outline: none; }
+.prc-arc:hover, .prc-arc:focus { stroke-width: 18; outline: none; filter: brightness(1.15); }
 
+.prc-tick {
+  stroke: var(--text3);
+  stroke-width: 1;
+  opacity: 0.35;
+}
+.prc-tick-major {
+  stroke: var(--text2);
+  stroke-width: 1.5;
+  opacity: 0.7;
+}
+
+.prc-minima-halo {
+  fill: rgba(239,68,68,0.18);
+  stroke: rgba(239,68,68,0.45);
+  stroke-width: 1;
+}
 .prc-minima {
   fill: #ef4444;
-  stroke: var(--bg);
-  stroke-width: 1.5;
+  stroke: var(--surface);
+  stroke-width: 2;
 }
 
+/* Bold needle pointing to current time. */
 .prc-pointer {
-  stroke: var(--text);
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  opacity: 0.9;
+  fill: var(--text);
+  stroke: var(--surface);
+  stroke-width: 1;
+  stroke-linejoin: round;
 }
 
+/* "You are here" dot on the current zone arc — large and bright. */
 .prc-zone-marker {
-  stroke: var(--bg);
-  stroke-width: 0.5;
+  stroke: var(--surface);
+  stroke-width: 2.5;
   pointer-events: none;
+  filter: drop-shadow(0 0 4px rgba(0,0,0,0.35));
+}
+
+[data-theme="light"] .prc-zone-marker {
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.25));
 }
 
 .prc-hour-labels text {
   font-family: var(--font-mono);
-  font-size: 8px;
-  fill: var(--text3);
-  letter-spacing: 0.05em;
+  font-size: 9px;
+  font-weight: 500;
+  fill: var(--text2);
+  letter-spacing: 0.04em;
 }
 
 .prc-center-label {
   font-family: var(--font-mono);
-  font-size: 7px;
-  letter-spacing: 0.18em;
+  font-size: 8px;
+  letter-spacing: 0.22em;
   fill: var(--text3);
   text-transform: uppercase;
+  font-weight: 500;
 }
 
 .prc-center-time {
   font-family: var(--font-head);
-  font-size: 19px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 700;
   fill: var(--text);
+  font-variant-numeric: tabular-nums;
 }
 
+/* Zone name in center — fill applied inline by JS (style.fill, beats CSS specificity) */
 .prc-center-zone {
   font-family: var(--font-mono);
-  font-size: 8px;
-  letter-spacing: 0.05em;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
   fill: var(--text2);
   text-transform: uppercase;
+}
+
+/* Live "NOW" time chip pinned to top-right of the clock area */
+.prc-now-chip {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  padding: 3px 9px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+.prc-now-chip::before {
+  content: 'NOW ';
+  color: var(--text3);
+  font-weight: 400;
+  letter-spacing: 0.1em;
+}
+
+.prc-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  justify-content: center;
+  padding: 2px 0;
+}
+.prc-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.62rem;
+  color: var(--text2);
+  letter-spacing: 0.02em;
+}
+.prc-legend-sw {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .prc-tooltip {

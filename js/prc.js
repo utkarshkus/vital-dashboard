@@ -13,8 +13,10 @@ const PRC = (function() {
 
   const CX = 120, CY = 120;
   const R_ARC = 92;            // radius of zone arcs
-  const R_POINTER_INNER = 60;  // pointer starts here (outside the center readouts)
-  const R_POINTER_OUTER = 100; // pointer ends just outside the arc ring
+  const R_POINTER_INNER = 56;  // pointer starts here (outside the center readouts)
+  const R_POINTER_OUTER = 108; // pointer ends past the arc ring with arrow tip
+  const R_TICK_INNER = 101;    // hour tick marks (sit just past arc outer edge ≈ 99.5)
+  const R_TICK_OUTER = 109;
   const SHIFT_THRESHOLD_MIN = 45;
 
   // Demo fallback: sleep 23:30 → 07:00
@@ -240,9 +242,17 @@ const PRC = (function() {
       g.appendChild(path);
     }
 
-    // Minima dot
+    drawHourTicks();
+
+    // Minima dot (outer halo + inner dot)
     const mp = pointAt(zones.minimaHour, R_ARC);
-    const dot = document.getElementById('prcMinima');
+    const halo = document.getElementById('prcMinimaHalo');
+    const dot  = document.getElementById('prcMinima');
+    if (halo) {
+      halo.setAttribute('cx', mp.x.toFixed(2));
+      halo.setAttribute('cy', mp.y.toFixed(2));
+      halo.style.display = '';
+    }
     if (dot) {
       dot.setAttribute('cx', mp.x.toFixed(2));
       dot.setAttribute('cy', mp.y.toFixed(2));
@@ -251,6 +261,25 @@ const PRC = (function() {
     }
 
     attachZoneListeners(zones);
+  }
+
+  function drawHourTicks() {
+    const g = document.getElementById('prcTicks');
+    if (!g) return;
+    g.innerHTML = '';
+    const ns = 'http://www.w3.org/2000/svg';
+    for (let h = 0; h < 24; h++) {
+      const major = (h % 6 === 0);
+      const p1 = pointAt(h, R_TICK_INNER);
+      const p2 = pointAt(h, R_TICK_OUTER);
+      const t = document.createElementNS(ns, 'line');
+      t.setAttribute('x1', p1.x.toFixed(2));
+      t.setAttribute('y1', p1.y.toFixed(2));
+      t.setAttribute('x2', p2.x.toFixed(2));
+      t.setAttribute('y2', p2.y.toFixed(2));
+      t.setAttribute('class', major ? 'prc-tick prc-tick-major' : 'prc-tick');
+      g.appendChild(t);
+    }
   }
 
   function attachZoneListeners(zones) {
@@ -325,48 +354,57 @@ const PRC = (function() {
     if (!lastZones) return;
     const now = new Date();
     const nowH = dateToHour(now);
+    const a = hourToAngleRad(nowH);
 
-    // Pointer line: from inner radius (clear of center text) to just past the arcs.
-    const inner = pointAt(nowH, R_POINTER_INNER);
-    const outer = pointAt(nowH, R_POINTER_OUTER);
+    // Pointer needle: a slender triangle from inner radius to outer tip.
+    // This is much more legible than a thin line.
+    const tip   = pointAt(nowH, R_POINTER_OUTER);
+    const baseL = (function() {
+      const perp = a + Math.PI / 2;
+      const p = pointAt(nowH, R_POINTER_INNER);
+      return { x: p.x + 4 * Math.cos(perp), y: p.y + 4 * Math.sin(perp) };
+    })();
+    const baseR = (function() {
+      const perp = a + Math.PI / 2;
+      const p = pointAt(nowH, R_POINTER_INNER);
+      return { x: p.x - 4 * Math.cos(perp), y: p.y - 4 * Math.sin(perp) };
+    })();
     const ptr = document.getElementById('prcPointer');
     if (ptr) {
-      ptr.setAttribute('x1', inner.x.toFixed(2));
-      ptr.setAttribute('y1', inner.y.toFixed(2));
-      ptr.setAttribute('x2', outer.x.toFixed(2));
-      ptr.setAttribute('y2', outer.y.toFixed(2));
+      ptr.setAttribute('points',
+        tip.x.toFixed(2) + ',' + tip.y.toFixed(2) + ' ' +
+        baseL.x.toFixed(2) + ',' + baseL.y.toFixed(2) + ' ' +
+        baseR.x.toFixed(2) + ',' + baseR.y.toFixed(2));
     }
 
-    // Triangle marker on current zone's arc, at the "now" position.
+    // Outer ring marker — a clearly visible dot sitting just outside the arcs,
+    // colored to match the current zone. This gives the strongest "you are here" signal.
     const cur = findCurrentZone(lastZones, nowH);
     const marker = document.getElementById('prcZoneMarker');
     const zoneText = document.getElementById('prcCurrentZone');
     if (marker) {
       if (cur) {
         const mp = pointAt(nowH, R_ARC);
-        const tipLen = 7;
-        // Triangle pointing inward toward the centre.
-        const a = hourToAngleRad(nowH);
-        const inX = CX + (R_ARC - tipLen) * Math.cos(a);
-        const inY = CY + (R_ARC - tipLen) * Math.sin(a);
-        const perp = a + Math.PI / 2;
-        const halfBase = 5;
-        const bx1 = mp.x + halfBase * Math.cos(perp);
-        const by1 = mp.y + halfBase * Math.sin(perp);
-        const bx2 = mp.x - halfBase * Math.cos(perp);
-        const by2 = mp.y - halfBase * Math.sin(perp);
-        marker.setAttribute('points',
-          inX.toFixed(2) + ',' + inY.toFixed(2) + ' ' +
-          bx1.toFixed(2) + ',' + by1.toFixed(2) + ' ' +
-          bx2.toFixed(2) + ',' + by2.toFixed(2));
-        marker.setAttribute('fill', cur.color);
+        marker.setAttribute('cx', mp.x.toFixed(2));
+        marker.setAttribute('cy', mp.y.toFixed(2));
+        marker.style.fill = cur.color;
         marker.style.display = '';
-        if (zoneText) { zoneText.textContent = cur.name; zoneText.setAttribute('fill', cur.color); }
+        if (zoneText) {
+          zoneText.textContent = cur.name.toUpperCase();
+          zoneText.style.fill = cur.color;
+        }
       } else {
         marker.style.display = 'none';
-        if (zoneText) { zoneText.textContent = 'Minima gap'; zoneText.setAttribute('fill', COLORS.minima); }
+        if (zoneText) {
+          zoneText.textContent = 'MINIMA GAP';
+          zoneText.style.fill = COLORS.minima;
+        }
       }
     }
+
+    // Live "NOW" time chip below the clock area.
+    const nowChip = document.getElementById('prcNowChip');
+    if (nowChip) nowChip.textContent = fmtClock(now);
 
     // Countdown to next boundary.
     const nb = nextEndDate(lastZones, now);

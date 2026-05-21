@@ -348,22 +348,26 @@
         <!-- zone arcs (rendered by prc.js) -->
         <g id="prcZones"></g>
 
-        <!-- hour labels -->
+        <!-- hour tick marks (rendered by prc.js) -->
+        <g id="prcTicks"></g>
+
+        <!-- hour labels (placed outside the tick ring; SVG has overflow:visible) -->
         <g class="prc-hour-labels">
-          <text x="120" y="18"  text-anchor="middle">00:00</text>
-          <text x="225" y="124" text-anchor="middle">06:00</text>
-          <text x="120" y="232" text-anchor="middle">12:00</text>
-          <text x="15"  y="124" text-anchor="middle">18:00</text>
+          <text x="120" y="6"   text-anchor="middle">00:00</text>
+          <text x="237" y="125" text-anchor="middle">06:00</text>
+          <text x="120" y="240" text-anchor="middle">12:00</text>
+          <text x="3"   y="125" text-anchor="middle">18:00</text>
         </g>
 
-        <!-- minima dot (red) — set by JS -->
-        <circle id="prcMinima" cx="120" cy="28" r="4.5" class="prc-minima" style="display:none" />
+        <!-- minima dot (red, with halo) — set by JS -->
+        <circle id="prcMinimaHalo" cx="120" cy="28" r="9" class="prc-minima-halo" style="display:none" />
+        <circle id="prcMinima"     cx="120" cy="28" r="5" class="prc-minima"      style="display:none" />
 
-        <!-- current-zone triangle marker — set by JS -->
-        <polygon id="prcZoneMarker" points="" class="prc-zone-marker" style="display:none" />
+        <!-- "you are here" dot on current zone arc — set by JS -->
+        <circle id="prcZoneMarker" cx="120" cy="28" r="7" class="prc-zone-marker" style="display:none" />
 
-        <!-- live current-time pointer -->
-        <line id="prcPointer" x1="120" y1="60" x2="120" y2="20" class="prc-pointer" />
+        <!-- live current-time pointer (slender triangle, set by JS) -->
+        <polygon id="prcPointer" points="120,28 116,60 124,60" class="prc-pointer" />
 
         <!-- center readouts -->
         <text x="120" y="104" text-anchor="middle" class="prc-center-label" id="prcCenterLabel">ENDS IN</text>
@@ -371,8 +375,16 @@
         <text x="120" y="145" text-anchor="middle" class="prc-center-zone" id="prcCurrentZone">—</text>
       </svg>
 
+      <div class="prc-now-chip" id="prcNowChip">--:--</div>
       <div class="prc-tooltip" id="prcTooltip" style="display:none"></div>
       <div class="prc-warning" id="prcWarning" style="display:none">⚠ Sleep &lt; 4hrs — zones may be inaccurate</div>
+    </div>
+
+    <div class="prc-legend">
+      <span class="prc-legend-item"><span class="prc-legend-sw" style="background:#7c3aed"></span>Phase Delay</span>
+      <span class="prc-legend-item"><span class="prc-legend-sw" style="background:#ef4444"></span>Minima</span>
+      <span class="prc-legend-item"><span class="prc-legend-sw" style="background:#3b82f6"></span>Phase Advance</span>
+      <span class="prc-legend-item"><span class="prc-legend-sw" style="background:#14b8a6"></span>Dead Zone</span>
     </div>
 
     <div class="prc-meta">
