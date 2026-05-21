@@ -320,6 +320,7 @@ async function boot() {
   try {
     await Promise.all([loadSleep(), loadRecoveryAndTemp(), loadCycle()]);
     renderApneaRisk();
+    PRC.renderFromCache(lastSleepData, lastRecoveryData);
     setSyncStatus('live', 'synced ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
   } catch (e) {
     setSyncStatus('error', 'WHOOP sync error');
@@ -486,9 +487,14 @@ document.addEventListener('DOMContentLoaded', function() {
   handleAuthRedirect();
   WeightTracker.init();
   CaffeineTracker.init();
+  PRC.init();                  // draws demo zones immediately
   initUserPanel();
   boot();
   setInterval(boot, 15 * 60 * 1000);
+  // Independent PRC refresh every 30 minutes (per spec).
+  setInterval(function() {
+    PRC.renderFromCache(lastSleepData, lastRecoveryData);
+  }, 30 * 60 * 1000);
 });
 
 // ─── WHOOP auth status ─────────────────────────────────────────
