@@ -66,8 +66,8 @@ exports.handler = async (event) => {
         return { statusCode: 409, headers: HDR, body: JSON.stringify({ error: 'Username already exists' }) };
       }
       const userId = crypto.randomBytes(8).toString('hex');
-      const { hash, salt } = await hashPassword(password);
-      users[username.toLowerCase()] = { userId, passwordHash: hash, salt, displayName: username, isAdmin: !!isAdmin, tokenVersion: 0 };
+      const { hash, salt, iterations } = await hashPassword(password);
+      users[username.toLowerCase()] = { userId, passwordHash: hash, salt, iterations, displayName: username, isAdmin: !!isAdmin, tokenVersion: 0 };
       await saveUsers(event, users);
       return { statusCode: 201, headers: HDR, body: JSON.stringify({ ok: true, userId }) };
     } catch (err) {

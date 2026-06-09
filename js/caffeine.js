@@ -571,8 +571,11 @@ const CaffeineTracker = {
       const pill = document.createElement('div');
       pill.className = 'caffeine-pill';
       const timeStr = d.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      pill.innerHTML = d.label + ' ' + d.mg + 'mg @ ' + timeStr +
-        ' <button onclick="CaffeineTracker.remove(' + i + ')">✕</button>';
+      pill.textContent = d.label + ' ' + d.mg + 'mg @ ' + timeStr + ' ';
+      const removeBtn = document.createElement('button');
+      removeBtn.textContent = '✕';
+      removeBtn.addEventListener('click', function() { CaffeineTracker.remove(i); });
+      pill.appendChild(removeBtn);
       container.appendChild(pill);
     });
   },

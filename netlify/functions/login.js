@@ -1,5 +1,5 @@
 // POST /api/login — validates credentials, issues session cookie.
-const { getUsers, verifyPassword } = require('./lib/users');
+const { getUsers, saveUsers, verifyPassword, hashPassword, needsRehash, PBKDF2_ITERS } = require('./lib/users');
 const { createSession, sessionCookie } = require('./lib/session');
 const { rateLimit } = require('./lib/ratelimit');
 
@@ -36,18 +36,26 @@ exports.handler = async (event) => {
 
     if (!user) {
       // Always hash to prevent user-enumeration via timing differences
-      await verifyPassword('_', 'a'.repeat(64), 'b'.repeat(32)).catch(() => {});
+      await verifyPassword('_', 'a'.repeat(64), 'b'.repeat(32), PBKDF2_ITERS).catch(() => {});
       await limiter.increment();
       return { statusCode: 401, headers: HDR, body: JSON.stringify({ error: 'Invalid credentials' }) };
     }
 
-    const valid = await verifyPassword(password, user.passwordHash, user.salt);
+    const valid = await verifyPassword(password, user.passwordHash, user.salt, user.iterations);
     if (!valid) {
       await limiter.increment();
       return { statusCode: 401, headers: HDR, body: JSON.stringify({ error: 'Invalid credentials' }) };
     }
 
     await limiter.reset(); // clear failed-attempt counter on success
+
+    // Transparently upgrade hashes stored at an older iteration count.
+    // tokenVersion is untouched, so existing sessions stay valid.
+    if (needsRehash(user)) {
+      const { hash, salt, iterations } = await hashPassword(password);
+      users[username.toLowerCase()] = { ...user, passwordHash: hash, salt, iterations };
+      await saveUsers(event, users).catch(err => console.error('Rehash save failed:', err.message));
+    }
     const token = await createSession(event, user.userId, user.tokenVersion || 0);
     return {
       statusCode: 200,
