@@ -49,16 +49,16 @@ exports.handler = async (event) => {
     }
     const [username, user] = entry;
 
-    const valid = await verifyPassword(currentPassword, user.passwordHash, user.salt);
+    const valid = await verifyPassword(currentPassword, user.passwordHash, user.salt, user.iterations);
     if (!valid) {
       await limiter.increment();
       return { statusCode: 401, headers: HDR, body: JSON.stringify({ error: 'Current password is incorrect' }) };
     }
 
     await limiter.reset();
-    const { hash, salt } = await hashPassword(newPassword);
+    const { hash, salt, iterations } = await hashPassword(newPassword);
     // Incrementing tokenVersion invalidates all existing sessions for this user.
-    users[username] = { ...user, passwordHash: hash, salt, tokenVersion: (user.tokenVersion || 0) + 1 };
+    users[username] = { ...user, passwordHash: hash, salt, iterations, tokenVersion: (user.tokenVersion || 0) + 1 };
     await saveUsers(event, users);
     return { statusCode: 200, headers: HDR, body: JSON.stringify({ ok: true }) };
   } catch (err) {

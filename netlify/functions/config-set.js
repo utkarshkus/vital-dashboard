@@ -17,7 +17,12 @@ function isValid(key, value) {
     case 'caffeineProfile':
       return ['default','smoker','contraceptive','pregnant'].includes(value);
     case 'caffeineDoses':
-      return Array.isArray(value) && value.length <= 50;
+      return Array.isArray(value) && value.length <= 50 &&
+        value.every(function(d) {
+          return d && typeof d.label === 'string' && d.label.length <= 40 &&
+            typeof d.mg === 'number' && d.mg > 0 && d.mg <= 1000 &&
+            typeof d.time === 'string' && d.time.length <= 32 && !isNaN(Date.parse(d.time));
+        });
     case 'weightLogs':
       return Array.isArray(value) && value.length <= 365 &&
         value.every(function(e) {

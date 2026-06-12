@@ -1,22 +1,29 @@
 // User management — password hashing (PBKDF2-SHA256) and Blobs-backed user store.
 const crypto = require('crypto');
 
-const PBKDF2_ITERS = 100000;
+const PBKDF2_ITERS = 600000; // OWASP-recommended minimum for PBKDF2-SHA256
+const LEGACY_ITERS = 100000; // hashes created before the iterations field existed
 const KEY_LEN = 32;
 
-async function hashPassword(password, salt) {
+async function hashPassword(password, salt, iterations = PBKDF2_ITERS) {
   if (!salt) salt = crypto.randomBytes(16).toString('hex');
   const hash = await new Promise((resolve, reject) => {
-    crypto.pbkdf2(password, salt, PBKDF2_ITERS, KEY_LEN, 'sha256', (err, key) => {
+    crypto.pbkdf2(password, salt, iterations, KEY_LEN, 'sha256', (err, key) => {
       if (err) reject(err); else resolve(key.toString('hex'));
     });
   });
-  return { hash, salt };
+  return { hash, salt, iterations };
 }
 
-async function verifyPassword(password, storedHash, salt) {
-  const { hash } = await hashPassword(password, salt);
+async function verifyPassword(password, storedHash, salt, iterations = LEGACY_ITERS) {
+  const { hash } = await hashPassword(password, salt, iterations);
   return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(storedHash, 'hex'));
+}
+
+// True if the stored hash predates the current iteration count and should be
+// regenerated next time the plaintext password is available.
+function needsRehash(user) {
+  return (user.iterations || LEGACY_ITERS) !== PBKDF2_ITERS;
 }
 
 async function getUsers(event) {
@@ -45,4 +52,4 @@ async function requireAdmin(event, session) {
   }
 }
 
-module.exports = { hashPassword, verifyPassword, getUsers, saveUsers, requireAdmin };
+module.exports = { hashPassword, verifyPassword, needsRehash, getUsers, saveUsers, requireAdmin, PBKDF2_ITERS };

@@ -293,7 +293,10 @@ const WeightTracker = {
       const [ey, em, ed] = entry.date.split('-').map(Number);
       const d = new Date(ey, em - 1, ed);
       const label = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
-      pill.innerHTML = label + ' <strong>' + entry.weight + ' kg</strong>';
+      pill.textContent = label + ' ';
+      const strong = document.createElement('strong');
+      strong.textContent = entry.weight + ' kg';
+      pill.appendChild(strong);
       container.appendChild(pill);
     });
   },
