@@ -93,6 +93,28 @@ All of this is stored server-side per user and syncs across devices.
 - **Input validation** — all writes to server-side config (`weight logs`, `caffeine doses`, etc.) are validated against an allowlist of keys with per-field type and range checks.
 - **Headers** — strict Content-Security-Policy (`default-src 'none'`), `X-Frame-Options: DENY`, `nosniff`, restrictive Permissions-Policy. The Chart.js CDN script is pinned with Subresource Integrity.
 - **WHOOP proxy** — rejects path traversal and forwards only allowlisted WHOOP API paths under the requesting user's own token.
+- **Account recovery** — the out-of-band reset endpoint is inert unless a `RECOVERY_TOKEN` environment variable is set. It is rate-limited per IP, compares the token in constant time, and resets a user in place without touching their data.
+
+---
+
+## Account recovery
+
+If you are locked out (forgotten password, no second admin), reset your password without losing data. The reset updates your record in place, so your `userId` and all per-user data (config, WHOOP tokens) stay attached.
+
+1. In the Netlify UI, go to **Site configuration → Environment variables** and add `RECOVERY_TOKEN` set to a long random string (32+ characters). Trigger a redeploy so functions pick it up.
+2. Open your site, open the browser devtools console, and run (substitute your values):
+
+   ```js
+   fetch('/api/reset-password', {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json' },
+     body: JSON.stringify({ token: 'YOUR_RECOVERY_TOKEN', username: 'your_username', newPassword: 'your_new_password' })
+   }).then(r => r.json()).then(console.log)
+   ```
+
+   A response of `{ ok: true }` means the reset succeeded. Any existing sessions are invalidated.
+3. Log in with the new password on the normal login page.
+4. **Delete `RECOVERY_TOKEN`** from the Netlify UI and redeploy. The endpoint returns to its inert state and the reset path is closed again.
 
 ---
 
@@ -126,6 +148,7 @@ vital-dashboard/
 │       ├── session-check.js      # Lightweight auth probe for the frontend
 │       ├── me.js                 # Current user profile
 │       ├── change-password.js    # Password change (invalidates sessions)
+│       ├── reset-password.js     # Out-of-band recovery reset (gated by RECOVERY_TOKEN)
 │       ├── admin-users.js        # Admin: list/create/update/delete users
 │       ├── auth-start.js         # WHOOP OAuth: redirect with state
 │       ├── auth-callback.js      # WHOOP OAuth: code exchange + token storage
